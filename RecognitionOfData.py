@@ -27,45 +27,18 @@ def to_grid(image_path, n_rows, n_cols, threshold=0.98):
     return grid    
     
 def extract_record(left_path="left.png", right_path="right.png", rows=16):
-    left  = to_grid(left_path,  rows, 8)
+    left  = to_grid(left_path,  rows, 9)
     right = to_grid(right_path, rows, 5)
     combined = [left[i] + right[i] for i in range(rows)]
     return combined
 
 # ---------------- everything below this line uses the result ----------------
+record = extract_record()       
+def get_grid():
+    global record
+    return record
 
-record = extract_record()      # record is your 16-row 2D array
+  # record is your 16-row 2D array
 
 for row in record:             # just to see it; delete once you trust it
     print(row)
-import sqlite3
-
-conn = sqlite3.connect("diabetes.db")
-cur = conn.cursor()
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS readings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    patient_id TEXT,
-    date TEXT,
-
-    glucose_before_breakfast   TEXT,
-    glucose_after_breakfast    TEXT,
-    glucose_before_lunch       TEXT,
-    glucose_after_lunch        TEXT,
-    glucose_before_dinner      TEXT,
-    glucose_after_dinner       TEXT,
-    glucose_before_sleep       TEXT,
-    glucose_2_3_am             TEXT,
-
-    insulin_before_breakfast   TEXT,
-    insulin_before_lunch       TEXT,
-    insulin_before_dinner      TEXT,
-    insulin_before_sleep       TEXT,
-    insulin_2_3_am             TEXT
-)
-""")
-
-conn.commit()
-conn.close()
-print("Created diabetes.db with the readings table")
