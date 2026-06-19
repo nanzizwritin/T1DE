@@ -58,12 +58,24 @@ def analyse():
         if len(present) < 4:
             days_few_readings += 1
 
-    # ================= BASAL QUESTIONS GO HERE =================
-    # After you confirm which column is the basal dose:
-    #   (1) days with no basal dose
-    #   (2) is basal changing by more than 2 units day to day
-    # ==========================================================
+    BASAL_COL = "insulin_before_sleep"   # 4th insulin column
 
+    days_no_basal = 0
+    basal_series = []
+    for row in rows:
+        basal = num(row[BASAL_COL])
+        if basal is None:
+            days_no_basal += 1
+        basal_series.append(basal)
+
+    # did basal change by more than 2 units, day to day?
+    basal_jumps = []
+    prev = None
+    for b in basal_series:
+        if b is not None and prev is not None and abs(b - prev) > 2:
+            basal_jumps.append((prev, b))
+        if b is not None:
+            prev = b
     print("=== GLUCOSE ===")
     print("Total days monitored     :", total_days)
     print("Total readings monitored :", readings_monitored)
@@ -74,6 +86,8 @@ def analyse():
 
     print("\n=== INSULIN ===")
     print("Days with < 4 readings   :", days_few_readings)
+    print("Days with no basal dose  :", days_no_basal)
+    print("Basal changes > 2 units? :", "YES" if basal_jumps else "NO")
+    if basal_jumps:
+        print("  jumps:", basal_jumps)
 
-
-analyse()

@@ -1,46 +1,85 @@
 import sqlite3
-from RecognitionOfData import get_grid
+def create_db(rec=None):
+    data = rec
+    conn = sqlite3.connect("diabetes.db")
+    cur = conn.cursor()
+    
 
-data = get_grid()
-conn = sqlite3.connect("diabetes.db")
-cur = conn.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS readings (
+        date TEXT,
 
-cur.execute("""
-CREATE TABLE IF NOT EXISTS readings (
-    date TEXT,
+        glucose_before_breakfast   TEXT,
+        glucose_after_breakfast    TEXT,
+        glucose_before_lunch       TEXT,
+        glucose_after_lunch        TEXT,
+        glucose_before_dinner      TEXT,
+        glucose_after_dinner       TEXT,
+        glucose_before_sleep       TEXT,
+        glucose_2_3_am             TEXT,
 
-    glucose_before_breakfast   TEXT,
-    glucose_after_breakfast    TEXT,
-    glucose_before_lunch       TEXT,
-    glucose_after_lunch        TEXT,
-    glucose_before_dinner      TEXT,
-    glucose_after_dinner       TEXT,
-    glucose_before_sleep       TEXT,
-    glucose_2_3_am             TEXT,
+        insulin_before_breakfast   TEXT,
+        insulin_before_lunch       TEXT,
+        insulin_before_dinner      TEXT,
+        insulin_before_sleep       TEXT,
+        insulin_2_3_am             TEXT
+    )
+    """)
+    cur.execute("DELETE FROM readings")
+    good_rows = []
 
-    insulin_before_breakfast   TEXT,
-    insulin_before_lunch       TEXT,
-    insulin_before_dinner      TEXT,
-    insulin_before_sleep       TEXT,
-    insulin_2_3_am             TEXT
-)
-""")
+    # Check row lengths
+    for row in data:
+        if len(row) != 14:
+            print("Bad row:", row)
+        else:
+            good_rows.append(row)
 
-good_rows = []
+    # Insert only valid rows
+    cur.executemany("""
+    INSERT INTO readings VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+    """, good_rows)
 
-# Check row lengths
-for row in data:
-    if len(row) != 14:
-        print("Bad row:", row)
-    else:
-        good_rows.append(row)
+    conn.commit()
+    conn.close()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS readings (
+        date TEXT,
 
-# Insert only valid rows
-cur.executemany("""
-INSERT INTO readings VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-)
-""", good_rows)
+        glucose_before_breakfast   TEXT,
+        glucose_after_breakfast    TEXT,
+        glucose_before_lunch       TEXT,
+        glucose_after_lunch        TEXT,
+        glucose_before_dinner      TEXT,
+        glucose_after_dinner       TEXT,
+        glucose_before_sleep       TEXT,
+        glucose_2_3_am             TEXT,
 
-conn.commit()
-conn.close()
+        insulin_before_breakfast   TEXT,
+        insulin_before_lunch       TEXT,
+        insulin_before_dinner      TEXT,
+        insulin_before_sleep       TEXT,
+        insulin_2_3_am             TEXT
+    )
+    """)
+    cur.execute("DELETE FROM readings")
+    good_rows = []
+
+    # Check row lengths
+    for row in data:
+        if len(row) != 14:
+            print("Bad row:", row)
+        else:
+            good_rows.append(row)
+
+    # Insert only valid rows
+    cur.executemany("""
+    INSERT INTO readings VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+    """, good_rows)
+
+    conn.commit()
+    conn.close()
