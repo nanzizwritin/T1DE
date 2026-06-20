@@ -1,6 +1,8 @@
 import sqlite3
 import pandas as pd
 import streamlit as st
+import os
+import time
 def fix_readings():
     DB = "diabetes.db"
 
@@ -24,3 +26,6 @@ def fix_readings():
         conn.commit()
         conn.close()
         st.success("Saved")
+        time.sleep(1)
+        os._exit(0)
+fix_readings()
