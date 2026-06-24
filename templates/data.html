@@ -8,25 +8,22 @@
   <form method="GET" action="/admin/data">
     <select name="center">
       <option value="">— pick a center —</option>
+      <option value="all" {% if selected == 'all' %}selected{% endif %}>All centers</option>
       {% for c in centers %}
-        <option value="{{ c['id'] }}" {% if selected_center == c['id']|string %}selected{% endif %}>{{ c['name'] }}</option>
+        <option value="{{ c['id'] }}" {% if selected == c['id']|string %}selected{% endif %}>{{ c['name'] }}</option>
       {% endfor %}
     </select>
     <button type="submit">View</button>
   </form>
 
-  {% if center %}
+  {% for center, nurses, patients in blocks %}
     <h2>{{ center['name'] }}</h2>
-
     <h3>Nurses</h3>
-    {% if center_nurses %}
-      <ul>{% for n in center_nurses %}<li>{{ n['username'] }}</li>{% endfor %}</ul>
+    {% if nurses %}<ul>{% for n in nurses %}<li>{{ n['username'] }}</li>{% endfor %}</ul>
     {% else %}<p>No nurses yet.</p>{% endif %}
-
     <h3>Patients</h3>
-    {% if center_patients %}
-      <ul>{% for p in center_patients %}<li>{{ p['patient_id'] }} — {{ p['name'] }}</li>{% endfor %}</ul>
+    {% if patients %}<ul>{% for p in patients %}<li>{{ p['patient_id'] }} — {{ p['name'] }}</li>{% endfor %}</ul>
     {% else %}<p>No patients yet.</p>{% endif %}
-  {% endif %}
+  {% endfor %}
 </body>
 </html>

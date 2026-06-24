@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><title>Nurse</title></head>
+<body style="font-family: sans-serif; max-width: 700px; margin: 2rem auto;">
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
+  {% endwith %}
+  <h1>Your patients</h1>
+  <p>Logged in as {{ session['username'] }} — <a href="/logout">log out</a></p>
+  <p><a href="/analysis">Analysis</a></p>
+  <ul>
+    {% for p in patients %}
+      <li>{{ p['patient_id'] }} — {{ p['name'] }} — <a href="/nurse/patient/{{ p['patient_id'] }}">open</a></li>
+    {% endfor %}
+  </ul>
+  <p><a href="/nurse/records">View records</a></p>
+  <h2>Add a patient</h2>
+  <form method="POST" action="/nurse/add_patient">
+    <input name="name" placeholder="Name">
+    <input name="password" type="password" placeholder="Patient password">
+    <button type="submit">Add</button>
+  </form>
+</body>
+</html>

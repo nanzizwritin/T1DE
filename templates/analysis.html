@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head><title>Analysis</title>
+<style>
+  body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; }
+  table { border-collapse: collapse; margin: 0.5rem 0 1.5rem; }
+  th, td { border: 1px solid #ccc; padding: 4px 12px; text-align: left; }
+  th { background: #f0f0f0; }
+  input, select { margin-right: 8px; }
+  .err { color: red; }
+</style>
+</head>
+<body>
+  <p><a href="/{{ role }}">← back</a></p>
+  <h1>Analysis</h1>
+
+  <form method="GET" action="/analysis">
+    Start <input type="date" name="start" value="{{ start or '' }}" required>
+    End <input type="date" name="end" value="{{ end or '' }}" required>
+    {% if role == 'admin' %}
+    <select name="center">
+      <option value="">All centers</option>
+      {% for c in centers %}
+        <option value="{{ c['id'] }}" {% if center == c['id']|string %}selected{% endif %}>{{ c['name'] }}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+    <select name="patient">
+      <option value="">All patients</option>
+      {% for p in patients %}
+        <option value="{{ p['patient_id'] }}" {% if patient == p['patient_id']|string %}selected{% endif %}>{{ p['patient_id'] }} — {{ p['name'] }}</option>
+      {% endfor %}
+    </select>
+    <button name="go" value="1" type="submit">Analyse</button>
+  </form>
+
+  {% if error %}<p class="err">{{ error }}</p>{% endif %}
+
+  {% macro show(a) %}
+    <table>
+      <tr><th>Glucose</th><th></th></tr>
+      <tr><td>Days monitored</td><td>{{ a.total_days }}</td></tr>
+      <tr><td>Readings monitored</td><td>{{ a.readings_monitored }}</td></tr>
+      <tr><td>Days in range</td><td>{{ a.days_in_range }}</td></tr>
+      <tr><td>Readings in range (70–180)</td><td>{{ a.readings_in_range }}</td></tr>
+      <tr><td>Hyperglycaemic (&gt;200)</td><td>{{ a.hyper }}</td></tr>
+      <tr><td>Hypoglycaemic (&lt;70)</td><td>{{ a.hypo }}</td></tr>
+      <tr><th>Insulin</th><th></th></tr>
+      <tr><td>Days with &lt; 4 readings</td><td>{{ a.days_few_readings }}</td></tr>
+      <tr><td>Days with no basal</td><td>{{ a.days_no_basal }}</td></tr>
+      <tr><td>Basal changes &gt; 2 units?</td><td>{{ 'Yes' if a.basal_jump else 'No' }}</td></tr>
+    </table>
+  {% endmacro %}
+
+  {% if per_patient is not none %}
+    {% if per_patient %}
+      {% for pid, name, a in per_patient %}
+        <h3>{{ pid }} — {{ name }}</h3>
+        {{ show(a) }}
+      {% endfor %}
+    {% else %}
+      <p>No records found in that date range.</p>
+    {% endif %}
+  {% endif %}
+</body>
+</html>

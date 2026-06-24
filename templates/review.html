@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head><title>Review record</title>
+<style>
+  body { font-family: sans-serif; max-width: 1100px; margin: 2rem auto; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 2px; }
+  th { font-size: 11px; background: #f0f0f0; }
+  input { width: 58px; border: none; padding: 4px; font-size: 13px; text-align: center; }
+  input:focus { outline: 1px solid #2E75B6; }
+  .datecol input { width: 100px; background: #fff7e6; }
+</style>
+</head>
+<body>
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
+  {% endwith %}
+  <h1>Review record</h1>
+  <p>Fix any “?” or wrong values. Every row with data needs a date — this year is filled in for you. Then save.</p>
+
+  <form method="POST" action="/nurse/save/{{ pid }}">
+    <table>
+      <tr>
+        <th>Date</th>
+        <th title="before breakfast">G-BB</th><th title="after breakfast">G-AB</th>
+        <th title="before lunch">G-BL</th><th title="after lunch">G-AL</th>
+        <th title="before dinner">G-BD</th><th title="after dinner">G-AD</th>
+        <th title="before sleep">G-BS</th><th title="2-3 am">G-2/3</th>
+        <th title="insulin before breakfast">I-BB</th><th title="insulin before lunch">I-BL</th>
+        <th title="insulin before dinner">I-BD</th><th title="insulin before sleep">I-BS</th>
+        <th title="insulin 2-3 am">I-2/3</th>
+      </tr>
+      {% for row in record %}
+      <tr>
+        {% set r = loop.index0 %}
+        {% for cell in row %}
+          <td {% if loop.first %}class="datecol"{% endif %}>
+            <input name="cell_{{ r }}_{{ loop.index0 }}" value="{{ cell }}">
+          </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+    <br>
+    <button type="submit">Save</button>
+  </form>
+</body>
+</html>

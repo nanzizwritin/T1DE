@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head><title>New record</title></head>
+<body style="font-family: sans-serif; max-width: 700px; margin: 2rem auto;">
+  <h1>New record</h1>
+  <p><a href="/nurse">← back</a></p>
+  <form method="POST" action="/nurse/new/{{ pid }}" enctype="multipart/form-data">
+    <input type="file" name="photo" accept="image/*">
+    <button type="submit">Upload</button>
+  </form>
+</body>
+</html>

@@ -2,9 +2,14 @@
 <html>
 <head><title>Admin</title></head>
 <body>
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
+  {% endwith %}
   <h1>Admin portal</h1>
   <p>Logged in as {{ session['username'] }} — <a href="/logout">log out</a></p>
   <p><a href="/admin/data">View all data</a></p>
+  <p><a href="/admin/records">View records</a></p>
+  <p><a href="/analysis">Analysis</a></p>
   <h2>Centers</h2>
   <ul>
     {% for c in centers %}
@@ -17,11 +22,7 @@
   </form>
 
   <h2>Nurses</h2>
-  <ul>
-    {% for n in nurses %}
-      <li>{{ n['username'] }} — center {{ n['center_id'] }}</li>
-    {% endfor %}
-  </ul>
+  
   {% if centers %}
   <form method="POST" action="/admin/add_nurse">
     <input name="username" placeholder="Nurse username">
@@ -35,6 +36,21 @@
   </form>
   {% else %}
   <p>Create a center first before adding nurses.</p>
+  {% endif %}
+  <h2>Patients</h2>
+  {% if centers %}
+  <form method="POST" action="/admin/add_patient">
+    <input name="name" placeholder="Name">
+    <input name="password" type="password" placeholder="Patient password">
+    <select name="center_id">
+      {% for c in centers %}
+        <option value="{{ c['id'] }}">{{ c['name'] }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Add patient</button>
+  </form>
+  {% else %}
+  <p>Create a center first before adding patients.</p>
   {% endif %}
 </body>
 </html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head><title>Mark corners</title>
+<style>
+  body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; }
+  #wrap { position: relative; display: inline-block; }
+  #photo { max-width: 100%; cursor: crosshair; }
+  .dot { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px;
+         border-radius: 50%; background: red; pointer-events: none; }
+  .dot.right { background: deepskyblue; }
+</style>
+</head>
+<body>
+  <h1>Mark the corners</h1>
+  <p id="status">Left (glucose) table: click its 4 corners</p>
+  <div id="wrap">
+    <img id="photo" src="/static/current.png">
+  </div>
+  <br>
+  <form method="POST" action="/nurse/process/{{ pid }}">
+    <input type="hidden" name="corners" id="corners">
+    <button type="submit" id="go" disabled>Run</button>
+    <button type="button" id="reset">Reset</button>
+  </form>
+
+<script>
+  const img = document.getElementById('photo');
+  const wrap = document.getElementById('wrap');
+  const status = document.getElementById('status');
+  const field = document.getElementById('corners');
+  const go = document.getElementById('go');
+  let points = [];
+
+  img.addEventListener('click', (e) => {
+    if (points.length >= 8) return;
+    const rect = img.getBoundingClientRect();
+    const dispX = e.clientX - rect.left;
+    const dispY = e.clientY - rect.top;
+    const x = Math.round(dispX * img.naturalWidth / rect.width);
+    const y = Math.round(dispY * img.naturalHeight / rect.height);
+    points.push([x, y]);
+
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (points.length > 4 ? ' right' : '');
+    dot.style.left = dispX + 'px';
+    dot.style.top = dispY + 'px';
+    wrap.appendChild(dot);
+
+    field.value = JSON.stringify(points);
+    update();
+  });
+
+  function update() {
+    if (points.length < 4) status.textContent = `Left (glucose) table: ${points.length}/4 corners`;
+    else if (points.length < 8) status.textContent = `Right (insulin) table: ${points.length - 4}/4 corners`;
+    else { status.textContent = 'All 8 corners marked — click Run'; go.disabled = false; }
+  }
+
+  document.getElementById('reset').addEventListener('click', () => {
+    points = [];
+    field.value = '';
+    go.disabled = true;
+    document.querySelectorAll('.dot').forEach(d => d.remove());
+    update();
+  });
+</script>
+</body>
+</html>

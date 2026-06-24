@@ -1,43 +1,60 @@
 import cv2
+import numpy as np
 from paddleocr import PaddleOCR
-def extract_data():
-    ocr = PaddleOCR(use_doc_orientation_classify=False, use_doc_unwarping=False,
-                    use_textline_orientation=False, lang="en")
 
-    def to_grid(image_path, n_rows, n_cols, threshold=0.98):
-        img = cv2.imread(image_path)
-        H, W = img.shape[:2]
-        row_h = H / n_rows
-        col_w = W / n_cols
+ocr = PaddleOCR(use_doc_orientation_classify=False, use_doc_unwarping=False,
+                use_textline_orientation=False, lang="en")
 
-        result = ocr.predict(image_path)[0]
-        texts  = result["rec_texts"]
-        boxes  = result["rec_polys"]
-        scores = result["rec_scores"]
 
-        grid = [["" for _ in range(n_cols)] for _ in range(n_rows)]
+def order_points(pts):
+    pts = np.array(pts, dtype="float32")
+    s = pts.sum(axis=1)
+    d = np.diff(pts, axis=1).ravel()
+    return np.array([
+        pts[np.argmin(s)],   # top-left
+        pts[np.argmin(d)],   # top-right
+        pts[np.argmax(s)],   # bottom-right
+        pts[np.argmax(d)],   # bottom-left
+    ], dtype="float32")
 
-        for value, box, score in zip(texts, boxes, scores):
-            xs = [p[0] for p in box]; ys = [p[1] for p in box]
-            r = int((sum(ys) / len(ys)) / row_h)
-            c = int((sum(xs) / len(xs)) / col_w)
-            if 0 <= r < n_rows and 0 <= c < n_cols:
-                grid[r][c] = value if score >= 0.99 else "?"
 
-        return grid    
-        
-    def extract_record(left_path="left.png", right_path="right.png", rows=16):
-        left  = to_grid(left_path,  rows, 9)
-        right = to_grid(right_path, rows, 5)
-        combined = [left[i] + right[i] for i in range(rows)]
-        return combined
+def warp_from_corners(image_path, corners, save_as, n_cols, n_rows, CELL_W=100, CELL_H=50):
+    img = cv2.imread(image_path)
+    pts = order_points(corners)
+    width, height = n_cols * CELL_W, n_rows * CELL_H
+    dst = np.array([[0, 0], [width, 0], [width, height], [0, height]], dtype="float32")
+    M = cv2.getPerspectiveTransform(pts, dst)
+    warped = cv2.warpPerspective(img, M, (width, height))
+    cv2.imwrite(save_as, warped)
+    return save_as
 
-    # ---------------- everything below this line uses the result ----------------
-    record = extract_record()       
-    def get_grid(record):
-        
-        return record
 
-    # record is your 16-row 2D array
+def to_grid(image_path, n_rows, n_cols, threshold=0.99):
+    img = cv2.imread(image_path)
+    H, W = img.shape[:2]
+    row_h = H / n_rows
+    col_w = W / n_cols
 
-    return get_grid(record)
+    result = ocr.predict(image_path)[0]
+    texts  = result["rec_texts"]
+    boxes  = result["rec_polys"]
+    scores = result["rec_scores"]
+
+    grid = [["" for _ in range(n_cols)] for _ in range(n_rows)]
+    for value, box, score in zip(texts, boxes, scores):
+        xs = [p[0] for p in box]; ys = [p[1] for p in box]
+        r = int((sum(ys) / len(ys)) / row_h)
+        c = int((sum(xs) / len(xs)) / col_w)
+        if 0 <= r < n_rows and 0 <= c < n_cols:
+            grid[r][c] = value if score >= threshold else "?"
+    return grid
+
+
+def extract_from_corners(image_path, all_corners, rows=16):
+    left_corners  = all_corners[:4]
+    right_corners = all_corners[4:]
+    warp_from_corners(image_path, left_corners,  "left.png",  n_cols=9, n_rows=rows)
+    warp_from_corners(image_path, right_corners, "right.png", n_cols=5, n_rows=rows)
+    left  = to_grid("left.png",  rows, 9)
+    right = to_grid("right.png", rows, 5)
+    return [left[i] + right[i] for i in range(rows)]

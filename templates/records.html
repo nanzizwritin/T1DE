@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head><title>Records</title>
+<style>
+  body { font-family: sans-serif; max-width: 1200px; margin: 2rem auto; }
+  table { border-collapse: collapse; font-size: 12px; margin-top: 1rem; }
+  th, td { border: 1px solid #ccc; padding: 3px 5px; }
+  th { background: #f0f0f0; }
+  form { margin-bottom: 1rem; }
+  select { margin-right: 8px; }
+</style>
+</head>
+<body>
+  <p><a href="/admin">← back to admin</a></p>
+  <h1>Records</h1>
+
+  <form method="GET" action="/admin/records">
+    <select name="center">
+      <option value="">All centers</option>
+      {% for c in centers %}
+        <option value="{{ c['id'] }}" {% if center == c['id']|string %}selected{% endif %}>{{ c['name'] }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="nurse">
+      <option value="">All nurses</option>
+      {% for n in nurses %}
+        <option value="{{ n['id'] }}" {% if nurse == n['id']|string %}selected{% endif %}>{{ n['username'] }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="patient">
+      <option value="">All patients</option>
+      {% for p in patients %}
+        <option value="{{ p['patient_id'] }}" {% if patient == p['patient_id']|string %}selected{% endif %}>{{ p['patient_id'] }} — {{ p['name'] }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit">Show</button>
+  </form>
+
+  <p>{{ readings|length }} rows</p>
+  <table>
+    {% if readings %}
+      <tr>{% for col in readings[0].keys() %}<th>{{ col }}</th>{% endfor %}</tr>
+      {% for r in readings %}
+        <tr>{% for col in readings[0].keys() %}<td>{{ r[col] }}</td>{% endfor %}</tr>
+      {% endfor %}
+    {% else %}
+      <tr><td>No records match.</td></tr>
+    {% endif %}
+  </table>
+</body>
+</html>

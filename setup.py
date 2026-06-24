@@ -22,9 +22,10 @@ CREATE TABLE IF NOT EXISTS users (
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS patients (
-    patient_id TEXT PRIMARY KEY,
+    patient_id INTEGER PRIMARY KEY AUTOINCREMENT,
     center_id INTEGER,
-    name TEXT
+    name TEXT,
+    password_hash TEXT
 )
 """)
 
