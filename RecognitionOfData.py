@@ -50,11 +50,15 @@ def to_grid(image_path, n_rows, n_cols, threshold=0.99):
     return grid
 
 
-def extract_from_corners(image_path, all_corners, rows=16):
+def extract_from_corners(image_path, all_corners, rows=16, insulin_cols=5):
     left_corners  = all_corners[:4]
     right_corners = all_corners[4:]
     warp_from_corners(image_path, left_corners,  "left.png",  n_cols=9, n_rows=rows)
-    warp_from_corners(image_path, right_corners, "right.png", n_cols=5, n_rows=rows)
+    warp_from_corners(image_path, right_corners, "right.png", n_cols=insulin_cols, n_rows=rows)
     left  = to_grid("left.png",  rows, 9)
-    right = to_grid("right.png", rows, 5)
-    return [left[i] + right[i] for i in range(rows)]
+    right = to_grid("right.png", rows, insulin_cols)
+    combined = []
+    for i in range(rows):
+        insulin = right[i] + [""] * (5 - insulin_cols)
+        combined.append(left[i] + insulin)
+    return combined

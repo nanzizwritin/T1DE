@@ -224,34 +224,6 @@ def nurse_patient(pid):
         return redirect("/nurse")
     return render_template("patient.html", patient=patient)
 
-@app.route("/nurse/new/<int:pid>", methods=["GET", "POST"])
-def nurse_new(pid):
-    if session.get("role") != "nurse":
-        return redirect("/login")
-    if request.method == "POST":
-        file = request.files.get("photo")
-        if not file:
-            return redirect(f"/nurse/new/{pid}")
-        os.makedirs("static", exist_ok=True)
-        file.save("static/current.png")
-        return redirect(f"/nurse/corners/{pid}")
-    return render_template("new.html", pid=pid)
-
-@app.route("/nurse/corners/<int:pid>")
-def nurse_corners(pid):
-    if session.get("role") != "nurse":
-        return redirect("/login")
-    return render_template("corners.html", pid=pid)
-
-@app.route("/nurse/process/<int:pid>", methods=["POST"])
-def nurse_process(pid):
-    if session.get("role") != "nurse":
-        return redirect("/login")
-    corners = json.loads(request.form["corners"])
-    record = extract_from_corners("static/current.png", corners)
-    for row in record:
-        row[0] = parse_date(row[0])
-    return render_template("review.html", record=record, pid=pid)
 
 @app.route("/nurse/save/<int:pid>", methods=["POST"])
 def nurse_save(pid):
@@ -386,6 +358,38 @@ def nurse_records():
     conn.close()
     return render_template("nurse_records.html",
                            patients=patients, readings=readings, patient=patient)
+
+@app.route("/nurse/new/<int:pid>", methods=["GET", "POST"])
+def nurse_new(pid):
+    if session.get("role") != "nurse":
+        return redirect("/login")
+    if request.method == "POST":
+        file = request.files.get("photo")
+        if not file:
+            return redirect(f"/nurse/new/{pid}")
+        os.makedirs("static", exist_ok=True)
+        file.save("static/current.png")
+        icols = request.form.get("insulin_cols", "5")
+        return redirect(f"/nurse/corners/{pid}?icols={icols}")
+    return render_template("new.html", pid=pid)
+
+@app.route("/nurse/corners/<int:pid>")
+def nurse_corners(pid):
+    if session.get("role") != "nurse":
+        return redirect("/login")
+    icols = request.args.get("icols", "5")
+    return render_template("corners.html", pid=pid, icols=icols)
+
+@app.route("/nurse/process/<int:pid>", methods=["POST"])
+def nurse_process(pid):
+    if session.get("role") != "nurse":
+        return redirect("/login")
+    corners = json.loads(request.form["corners"])
+    icols = int(request.form.get("icols", 5))
+    record = extract_from_corners("static/current.png", corners, insulin_cols=icols)
+    for row in record:
+        row[0] = parse_date(row[0])
+    return render_template("review.html", record=record, pid=pid)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -6,6 +6,13 @@
   <p><a href="/nurse">← back</a></p>
   <form method="POST" action="/nurse/new/{{ pid }}" enctype="multipart/form-data">
     <input type="file" name="photo" accept="image/*">
+    <label>
+      Insulin columns on this sheet:
+      <select name="insulin_cols">
+        <option value="5">5</option>
+        <option value="4">4</option>
+      </select>
+    </label>
     <button type="submit">Upload</button>
   </form>
 </body>

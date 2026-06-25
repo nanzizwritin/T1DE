@@ -19,6 +19,7 @@
   <br>
   <form method="POST" action="/nurse/process/{{ pid }}">
     <input type="hidden" name="corners" id="corners">
+    <input type="hidden" name="icols" value="{{ icols }}">
     <button type="submit" id="go" disabled>Run</button>
     <button type="button" id="reset">Reset</button>
   </form>
