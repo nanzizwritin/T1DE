@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head><title>Manage</title></head>
+<body style="font-family: sans-serif; max-width: 700px; margin: 2rem auto;">
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
+  {% endwith %}
+
+  <p><a href="/admin">← back</a></p>
+  <h1>Manage</h1>
+
+  <h2>Centers</h2>
+  <ul>
+    {% for c in centers %}
+      <li>{{ c['id'] }} — {{ c['name'] }}</li>
+    {% endfor %}
+  </ul>
+  <form method="POST" action="/admin/add_center">
+    <input name="name" placeholder="New center name">
+    <button type="submit">Add center</button>
+  </form>
+
+  <h2>Nurses</h2>
+  {% if centers %}
+  <form method="POST" action="/admin/add_nurse">
+    <input name="username" placeholder="Nurse username">
+    <input name="password" type="password" placeholder="Password">
+    <select name="center_id">
+      {% for c in centers %}
+        <option value="{{ c['id'] }}">{{ c['name'] }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Add nurse</button>
+  </form>
+  {% else %}
+  <p>Create a center first before adding nurses.</p>
+  {% endif %}
+
+  <h2>Patients</h2>
+  {% if centers %}
+  <form method="POST" action="/admin/add_patient">
+    <input name="name" placeholder="Name">
+    <input name="username" placeholder="Patient username">
+    <input name="password" type="password" placeholder="Patient password">
+    <select name="center_id">
+      {% for c in centers %}
+        <option value="{{ c['id'] }}">{{ c['name'] }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Add patient</button>
+  </form>
+  {% else %}
+  <p>Create a center first before adding patients.</p>
+  {% endif %}
+</body>
+</html>

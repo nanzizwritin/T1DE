@@ -4,6 +4,9 @@
 <body style="font-family: sans-serif; max-width: 700px; margin: 2rem auto;">
   <h1>New record</h1>
   <p><a href="/nurse">← back</a></p>
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
+  {% endwith %}
   <form method="POST" action="/nurse/new/{{ pid }}" enctype="multipart/form-data">
     <input type="file" name="photo" accept="image/*">
     <label>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head><title>My records</title>
+<style>
+  body { font-family: sans-serif; max-width: 1000px; margin: 2rem auto; }
+  table { border-collapse: collapse; font-size: 12px; margin-top: 1rem; }
+  th, td { border: 1px solid #ccc; padding: 3px 5px; }
+  th { background: #f0f0f0; }
+  .info { background: #f5f9ff; border: 1px solid #cfe0f5; padding: 1rem 1.25rem; margin-top: 1.5rem; border-radius: 6px; }
+  .info h2 { margin-top: 0; }
+  .disclaimer { color: #555; font-size: 13px; font-style: italic; }
+</style>
+</head>
+<body>
+  <h1>My records</h1>
+  <p>Logged in as {{ session['username'] }} — <a href="/logout">log out</a></p>
+
+  <p>{{ readings|length }} rows</p>
+  <table>
+    {% if readings %}
+      <tr>{% for col in readings[0].keys() %}<th>{{ col }}</th>{% endfor %}</tr>
+      {% for r in readings %}
+        <tr>{% for col in readings[0].keys() %}<td>{{ r[col] }}</td>{% endfor %}</tr>
+      {% endfor %}
+    {% else %}
+      <tr><td>No records yet.</td></tr>
+    {% endif %}
+  </table>
+
+  <div class="info">
+    <h2>About Type 1 Diabetes</h2>
+    <p>Type 1 diabetes is a condition where the body's immune system stops the pancreas from making insulin — the hormone that lets your body use glucose (sugar) from food for energy. Because of this, blood glucose has to be managed with insulin every day.</p>
+
+    <h3>Understanding your glucose numbers</h3>
+    <p>Blood glucose is usually measured in mg/dL. A common general target range is <strong>70–180 mg/dL</strong>, though your own targets are set by your doctor.</p>
+    <ul>
+      <li><strong>Below 70 (hypoglycaemia / "hypo"):</strong> too low. Can cause shakiness, sweating, confusion. Usually treated quickly with fast-acting sugar.</li>
+      <li><strong>70–180 (in range):</strong> the general goal for most of the day.</li>
+      <li><strong>Above 180–200 (hyperglycaemia / "hyper"):</strong> too high. Frequent highs over time can affect long-term health.</li>
+    </ul>
+
+    <h3>Why monitoring matters</h3>
+    <p>Tracking glucose and insulin regularly helps you and your care team spot patterns — like times of day that tend to run high or low — and adjust care. Recording values consistently is one of the most useful things you can do between visits.</p>
+
+    <h3>Insulin basics</h3>
+    <p>Most people with T1D use two kinds of insulin: <strong>basal</strong> (long-acting, working quietly in the background) and <strong>bolus</strong> (taken around meals). Keeping doses and timing consistent helps keep glucose steadier.</p>
+
+    <p class="disclaimer">This information is general education about Type 1 diabetes, not medical advice. Always follow the guidance of your own doctor or diabetes care team for decisions about your treatment.</p>
+  </div>
+</body>
+</html>

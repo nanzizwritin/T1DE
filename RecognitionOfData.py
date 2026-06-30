@@ -49,6 +49,25 @@ def to_grid(image_path, n_rows, n_cols, threshold=0.99):
             grid[r][c] = value if score >= threshold else "?"
     return grid
 
+def check_image_quality(image_path):
+    img = cv2.imread(image_path)
+    if img is None:
+        return "Could not read the image — try a different file."
+
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    blur = cv2.Laplacian(gray, cv2.CV_64F).var()
+    if blur < 100:
+        return f"Image looks blurry (sharpness {blur:.0f}). Hold steady and retake."
+
+    brightness = gray.mean()
+    if brightness < 50:
+        return f"Image is too dark (brightness {brightness:.0f}). Use better lighting."
+    if brightness > 220:
+        return f"Image is too bright / washed out (brightness {brightness:.0f}). Reduce glare."
+
+    return None   # None = image is fine
 
 def extract_from_corners(image_path, all_corners, rows=16, insulin_cols=5):
     left_corners  = all_corners[:4]

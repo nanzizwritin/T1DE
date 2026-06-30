@@ -6,26 +6,14 @@
     {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
   {% endwith %}
 
-  <h1>Your patients</h1>
-  <p>Logged in as {{ session['username'] }} — <a href="/logout">log out</a></p>
+  <h1>Welcome, {{ session['username'] }}</h1>
+  <p><a href="/logout">log out</a></p>
 
-  <p>
-    <a href="/nurse/records">View records</a> |
-    <a href="/analysis">Analysis</a>
-  </p>
-
-  <h2>Patients</h2>
+  <h2>What do you want to do?</h2>
   <ul>
-    {% for p in patients %}
-      <li>{{ p['patient_id'] }} — {{ p['name'] }} — <a href="/nurse/patient/{{ p['patient_id'] }}">open</a></li>
-    {% endfor %}
+    <li><a href="/nurse/patients">Manage patients</a> — view your patients, add new ones, open a patient to add records</li>
+    <li><a href="/nurse/records">View records</a> — see saved readings for your center</li>
+    <li><a href="/analysis">Analysis</a> — glucose and insulin summaries over a date range</li>
   </ul>
-
-  <h2>Add a patient</h2>
-  <form method="POST" action="/nurse/add_patient">
-    <input name="name" placeholder="Name">
-    <input name="password" type="password" placeholder="Patient password">
-    <button type="submit">Add</button>
-  </form>
 </body>
 </html>

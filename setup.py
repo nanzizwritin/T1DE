@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS patients (
     patient_id INTEGER PRIMARY KEY AUTOINCREMENT,
     center_id INTEGER,
     name TEXT,
+    username TEXT,
     password_hash TEXT
 )
 """)

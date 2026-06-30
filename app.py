@@ -94,24 +94,44 @@ def analyse_rows(rows):
 
 @app.route("/")
 def home():
-    if "user_id" not in session:
-        return redirect("/login")
-    if session["role"] == "admin":
+    role = session.get("role")
+    if role == "admin":
         return redirect("/admin")
-    return redirect("/nurse")
+    if role == "nurse":
+        return redirect("/nurse")
+    if role == "patient":
+        return redirect("/patient")
+    return redirect("/login")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
         conn = db()
-        user = conn.execute("SELECT * FROM users WHERE username = ?", (request.form["username"],)).fetchone()
-        conn.close()
-        if user and check_password_hash(user["password_hash"], request.form["password"]):
+
+        # 1. check users (admin / nurse)
+        user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+        if user and check_password_hash(user["password_hash"], password):
+            session.clear()
             session["user_id"] = user["id"]
             session["username"] = user["username"]
             session["role"] = user["role"]
             session["center_id"] = user["center_id"]
+            conn.close()
             return redirect("/")
+
+        # 2. otherwise check patients (by username)
+        patient = conn.execute("SELECT * FROM patients WHERE username = ?", (username,)).fetchone()
+        if patient and patient["password_hash"] and check_password_hash(patient["password_hash"], password):
+            session.clear()
+            session["patient_id"] = patient["patient_id"]
+            session["username"] = patient["name"]
+            session["role"] = "patient"
+            conn.close()
+            return redirect("/")
+
+        conn.close()
         return render_template("login.html", error="Wrong username or password")
     return render_template("login.html")
 
@@ -124,11 +144,16 @@ def logout():
 def admin():
     if session.get("role") != "admin":
         return redirect("/login")
+    return render_template("admin.html")
+
+@app.route("/admin/manage")
+def admin_manage():
+    if session.get("role") != "admin":
+        return redirect("/login")
     conn = db()
     centers = conn.execute("SELECT * FROM centers").fetchall()
-    nurses = conn.execute("SELECT * FROM users WHERE role = 'nurse'").fetchall()
     conn.close()
-    return render_template("admin.html", centers=centers, nurses=nurses)
+    return render_template("admin_manage.html", centers=centers)
 
 @app.route("/admin/add_center", methods=["POST"])
 def add_center():
@@ -138,26 +163,25 @@ def add_center():
     conn.execute("INSERT INTO centers (name) VALUES (?)", (request.form["name"],))
     conn.commit()
     conn.close()
-    return redirect("/admin")
-
+    return redirect("/admin/manage")
 @app.route("/admin/add_nurse", methods=["POST"])
 def add_nurse():
     if session.get("role") != "admin":
         return redirect("/login")
     center_id = request.form.get("center_id")
     if not center_id:
-        return redirect("/admin")
+        return redirect("/admin/manage")
     username = request.form["username"]
     conn = db()
     if conn.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone():
         conn.close()
         flash("That username already exists — pick another.")
-        return redirect("/admin")
+        return redirect("/admin/manage")
     conn.execute("INSERT INTO users (username, password_hash, role, center_id) VALUES (?, ?, 'nurse', ?)",
                  (username, generate_password_hash(request.form["password"]), center_id))
     conn.commit()
     conn.close()
-    return redirect("/admin")
+    return redirect("/admin/manage")
 
 @app.route("/admin/add_patient", methods=["POST"])
 def admin_add_patient():
@@ -165,13 +189,21 @@ def admin_add_patient():
         return redirect("/login")
     center_id = request.form.get("center_id")
     if not center_id:
-        return redirect("/admin")
+        return redirect("/admin/manage")
+    username = request.form["username"]
     conn = db()
-    conn.execute("INSERT INTO patients (center_id, name, password_hash) VALUES (?, ?, ?)",
-                 (center_id, request.form["name"], generate_password_hash(request.form["password"])))
+    clash = conn.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone() \
+         or conn.execute("SELECT 1 FROM patients WHERE username=?", (username,)).fetchone()
+    if clash:
+        conn.close()
+        flash("That username is already taken — pick another.")
+        return redirect("/admin/manage")
+    conn.execute("INSERT INTO patients (center_id, name, username, password_hash) VALUES (?, ?, ?, ?)",
+                 (center_id, request.form["name"], username,
+                  generate_password_hash(request.form["password"])))
     conn.commit()
     conn.close()
-    return redirect("/admin")
+    return redirect("/admin/manage")
 
 @app.route("/admin/data")
 def admin_data():
@@ -194,22 +226,35 @@ def admin_data():
 def nurse():
     if session.get("role") != "nurse":
         return redirect("/login")
+    return render_template("nurse.html")
+
+@app.route("/nurse/patients")
+def nurse_patients():
+    if session.get("role") != "nurse":
+        return redirect("/login")
     conn = db()
     patients = conn.execute("SELECT * FROM patients WHERE center_id=?", (session["center_id"],)).fetchall()
     conn.close()
-    return render_template("nurse.html", patients=patients)
+    return render_template("nurse_patients.html", patients=patients)
 
 @app.route("/nurse/add_patient", methods=["POST"])
 def add_patient():
     if session.get("role") != "nurse":
         return redirect("/login")
+    username = request.form["username"]
     conn = db()
-    conn.execute("INSERT INTO patients (center_id, name, password_hash) VALUES (?, ?, ?)",
-                 (session["center_id"], request.form["name"],
+    clash = conn.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone() \
+         or conn.execute("SELECT 1 FROM patients WHERE username=?", (username,)).fetchone()
+    if clash:
+        conn.close()
+        flash("That username is already taken — pick another.")
+        return redirect("/nurse/patients")
+    conn.execute("INSERT INTO patients (center_id, name, username, password_hash) VALUES (?, ?, ?, ?)",
+                 (session["center_id"], request.form["name"], username,
                   generate_password_hash(request.form["password"])))
     conn.commit()
     conn.close()
-    return redirect("/nurse")
+    return redirect("/nurse/patients")
 
 @app.route("/nurse/patient/<int:pid>")
 def nurse_patient(pid):
@@ -359,19 +404,7 @@ def nurse_records():
     return render_template("nurse_records.html",
                            patients=patients, readings=readings, patient=patient)
 
-@app.route("/nurse/new/<int:pid>", methods=["GET", "POST"])
-def nurse_new(pid):
-    if session.get("role") != "nurse":
-        return redirect("/login")
-    if request.method == "POST":
-        file = request.files.get("photo")
-        if not file:
-            return redirect(f"/nurse/new/{pid}")
-        os.makedirs("static", exist_ok=True)
-        file.save("static/current.png")
-        icols = request.form.get("insulin_cols", "5")
-        return redirect(f"/nurse/corners/{pid}?icols={icols}")
-    return render_template("new.html", pid=pid)
+
 
 @app.route("/nurse/corners/<int:pid>")
 def nurse_corners(pid):
@@ -390,6 +423,38 @@ def nurse_process(pid):
     for row in record:
         row[0] = parse_date(row[0])
     return render_template("review.html", record=record, pid=pid)
+
+@app.route("/nurse/new/<int:pid>", methods=["GET", "POST"])
+def nurse_new(pid):
+    if session.get("role") != "nurse":
+        return redirect("/login")
+    if request.method == "POST":
+        file = request.files.get("photo")
+        if not file:
+            return redirect(f"/nurse/new/{pid}")
+        os.makedirs("static", exist_ok=True)
+        file.save("static/current.png")
+
+        from RecognitionOfData import check_image_quality
+        problem = check_image_quality("static/current.png")
+        if problem:
+            flash(problem)
+            return redirect(f"/nurse/new/{pid}")
+
+        icols = request.form.get("insulin_cols", "5")
+        return redirect(f"/nurse/corners/{pid}?icols={icols}")
+    return render_template("new.html", pid=pid)
+
+@app.route("/patient")
+def patient_home():
+    if session.get("role") != "patient":
+        return redirect("/login")
+    conn = db()
+    readings = conn.execute(
+        "SELECT * FROM readings WHERE patient_id = ? ORDER BY date",
+        (session["patient_id"],)).fetchall()
+    conn.close()
+    return render_template("patient_portal.html", readings=readings)
 
 if __name__ == "__main__":
     app.run(debug=True)
