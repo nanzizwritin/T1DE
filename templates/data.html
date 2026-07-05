@@ -19,10 +19,22 @@
   {% for center, nurses, patients in blocks %}
     <h2>{{ center['name'] }}</h2>
     <h3>Nurses</h3>
-    {% if nurses %}<ul>{% for n in nurses %}<li>{{ n['username'] }}</li>{% endfor %}</ul>
+    {% if nurses %}<ul>{% for n in nurses %}
+  <li>{{ n['username'] }} — {{ 'active' if n['active'] else 'INACTIVE' }}
+    <a href="/admin/toggle_nurse/{{ n['id'] }}"
+       onclick="return confirm('Change login access for this nurse?')">
+       {{ 'deactivate' if n['active'] else 'reactivate' }}</a>
+  </li>
+{% endfor %}</ul>
     {% else %}<p>No nurses yet.</p>{% endif %}
     <h3>Patients</h3>
-    {% if patients %}<ul>{% for p in patients %}<li>{{ p['patient_id'] }} — {{ p['name'] }}</li>{% endfor %}</ul>
+    {% if patients %}<ul>{% for p in patients %}
+  <li>{{ p['patient_id'] }} — {{ p['name'] }} — {{ 'active' if p['active'] else 'INACTIVE' }}
+    <a href="/admin/toggle_patient/{{ p['patient_id'] }}"
+       onclick="return confirm('Change login access for this patient?')">
+       {{ 'deactivate' if p['active'] else 'reactivate' }}</a>
+  </li>
+{% endfor %}</ul>
     {% else %}<p>No patients yet.</p>{% endif %}
   {% endfor %}
 </body>

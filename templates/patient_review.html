@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head><title>Review record</title>
+<style>
+  body { font-family: sans-serif; max-width: 1100px; margin: 2rem auto; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 2px; }
+  th { font-size: 11px; background: #f0f0f0; }
+  input { width: 58px; border: none; padding: 4px; font-size: 13px; text-align: center; }
+  input:focus { outline: 1px solid #2E75B6; }
+  .datecol input { width: 100px; background: #fff7e6; }
+</style>
+</head>
+<body>
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
+  {% endwith %}
+  <h1>Review record</h1>
+  <p>Fix any “?” or wrong values. Every row with data needs a date. Then save.</p>
+
+  <form method="POST" action="/patient/save">
+    <table>
+      <tr>
+        <th>Date</th>
+        <th>G-BB</th><th>G-AB</th><th>G-BL</th><th>G-AL</th>
+        <th>G-BD</th><th>G-AD</th><th>G-BS</th><th>G-2/3</th>
+        <th>I-BB</th><th>I-BL</th><th>I-BD</th><th>I-BS</th><th>I-2/3</th>
+      </tr>
+      {% for row in record %}
+      <tr>
+        {% set r = loop.index0 %}
+        {% for cell in row %}
+          <td {% if loop.first %}class="datecol"{% endif %}>
+            <input name="cell_{{ r }}_{{ loop.index0 }}" value="{{ cell }}">
+          </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+    <br>
+    <button type="submit">Save</button>
+  </form>
+</body>
+</html>

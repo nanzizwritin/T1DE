@@ -112,7 +112,7 @@ def login():
 
         # 1. check users (admin / nurse)
         user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-        if user and check_password_hash(user["password_hash"], password):
+        if user and user["active"] and check_password_hash(user["password_hash"], password):
             session.clear()
             session["user_id"] = user["id"]
             session["username"] = user["username"]
@@ -123,7 +123,7 @@ def login():
 
         # 2. otherwise check patients (by username)
         patient = conn.execute("SELECT * FROM patients WHERE username = ?", (username,)).fetchone()
-        if patient and patient["password_hash"] and check_password_hash(patient["password_hash"], password):
+        if patient and patient["active"] and patient["password_hash"] and check_password_hash(patient["password_hash"], password):
             session.clear()
             session["patient_id"] = patient["patient_id"]
             session["username"] = patient["name"]
@@ -164,6 +164,7 @@ def add_center():
     conn.commit()
     conn.close()
     return redirect("/admin/manage")
+
 @app.route("/admin/add_nurse", methods=["POST"])
 def add_nurse():
     if session.get("role") != "admin":
@@ -176,6 +177,10 @@ def add_nurse():
     if conn.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone():
         conn.close()
         flash("That username already exists — pick another.")
+        return redirect("/admin/manage")
+    if not password_ok(request.form["password"]):
+        conn.close()
+        flash("Password must be at least 6 characters.")
         return redirect("/admin/manage")
     conn.execute("INSERT INTO users (username, password_hash, role, center_id) VALUES (?, ?, 'nurse', ?)",
                  (username, generate_password_hash(request.form["password"]), center_id))
@@ -197,6 +202,10 @@ def admin_add_patient():
     if clash:
         conn.close()
         flash("That username is already taken — pick another.")
+        return redirect("/admin/manage")
+    if not password_ok(request.form["password"]):
+        conn.close()
+        flash("Password must be at least 6 characters.")
         return redirect("/admin/manage")
     conn.execute("INSERT INTO patients (center_id, name, username, password_hash) VALUES (?, ?, ?, ?)",
                  (center_id, request.form["name"], username,
@@ -249,6 +258,10 @@ def add_patient():
         conn.close()
         flash("That username is already taken — pick another.")
         return redirect("/nurse/patients")
+    if not password_ok(request.form["password"]):
+        conn.close()
+        flash("Password must be at least 6 characters.")
+        return redirect("/admin/manage")
     conn.execute("INSERT INTO patients (center_id, name, username, password_hash) VALUES (?, ?, ?, ?)",
                  (session["center_id"], request.form["name"], username,
                   generate_password_hash(request.form["password"])))
@@ -455,6 +468,349 @@ def patient_home():
         (session["patient_id"],)).fetchall()
     conn.close()
     return render_template("patient_portal.html", readings=readings)
+
+@app.route("/nurse/manual/<int:pid>")
+def nurse_manual(pid):
+    if session.get("role") != "nurse":
+        return redirect("/login")
+    conn = db()
+    patient = conn.execute("SELECT * FROM patients WHERE patient_id=? AND center_id=?",
+                           (pid, session["center_id"])).fetchone()
+    conn.close()
+    if not patient:
+        return redirect("/nurse")
+    today = datetime.now().strftime("%Y-%m-%d")
+    return render_template("manual.html", patient=patient, today=today)
+
+@app.route("/nurse/manual/<int:pid>/save", methods=["POST"])
+def nurse_manual_save(pid):
+
+    if session.get("role") != "nurse":
+        return redirect("/login")
+
+    dates = request.form.getlist("date")
+    rows = []
+    for i in range(len(dates)):
+        row = [request.form.getlist(f"col{c}")[i] for c in range(13)]  # 13 value cols
+        full = [dates[i]] + row
+        rows.append([cell.strip() for cell in full])
+
+    def has_data(row):
+        return any(cell for cell in row[1:])  # any value beyond date
+    filled = [r for r in rows if has_data(r)]
+
+    for r in filled:
+        if not r[0]:
+            flash("Every row with data needs a date.")
+            return redirect(f"/nurse/manual/{pid}")
+
+    conn = db()
+    for r in filled:
+        conn.execute("""
+            INSERT INTO readings (
+                patient_id, center_id, entered_by, date,
+                glucose_before_breakfast, glucose_after_breakfast,
+                glucose_before_lunch, glucose_after_lunch,
+                glucose_before_dinner, glucose_after_dinner,
+                glucose_before_sleep, glucose_2_3_am,
+                insulin_before_breakfast, insulin_before_lunch,
+                insulin_before_dinner, insulin_before_sleep,
+                insulin_2_3_am
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [pid, session["center_id"], session["user_id"]] + r)
+    conn.commit()
+    conn.close()
+    flash(f"Saved {len(filled)} rows.")
+    return redirect(f"/nurse/patient/{pid}")
+                
+@app.route("/patient/manual")
+def patient_manual():
+    if session.get("role") != "patient":
+        return redirect("/login")
+    today = datetime.now().strftime("%Y-%m-%d")
+    return render_template("patient_manual.html", today=today)
+
+@app.route("/patient/manual/save", methods=["POST"])
+def patient_manual_save():
+    if session.get("role") != "patient":
+        return redirect("/login")
+    pid = session["patient_id"]
+
+    dates = request.form.getlist("date")
+    rows = []
+    for i in range(len(dates)):
+        row = [request.form.getlist(f"col{c}")[i] for c in range(13)]
+        full = [dates[i]] + row
+        rows.append([cell.strip() for cell in full])
+
+    def has_data(row):
+        return any(cell for cell in row[1:])
+    filled = [r for r in rows if has_data(r)]
+
+    for r in filled:
+        if not r[0]:
+            flash("Every row with data needs a date.")
+            return redirect("/patient/manual")
+
+    # patient's own center, so readings stay scoped correctly
+    conn = db()
+    prow = conn.execute("SELECT center_id FROM patients WHERE patient_id=?", (pid,)).fetchone()
+    center_id = prow["center_id"] if prow else None
+    for r in filled:
+        conn.execute("""
+            INSERT INTO readings (
+                patient_id, center_id, entered_by, date,
+                glucose_before_breakfast, glucose_after_breakfast,
+                glucose_before_lunch, glucose_after_lunch,
+                glucose_before_dinner, glucose_after_dinner,
+                glucose_before_sleep, glucose_2_3_am,
+                insulin_before_breakfast, insulin_before_lunch,
+                insulin_before_dinner, insulin_before_sleep,
+                insulin_2_3_am
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [pid, center_id, None] + r)
+    conn.commit()
+    conn.close()
+    flash(f"Saved {len(filled)} rows.")
+    return redirect("/patient")
+
+@app.route("/records/edit", methods=["GET", "POST"])
+def records_edit():
+    role = session.get("role")
+    if role not in ("admin", "nurse", "patient"):
+        return redirect("/login")
+
+    conn = db()
+
+    # scope: what rows can this person touch?
+    if role == "admin":
+        where, params = "1=1", []
+    elif role == "nurse":
+        where, params = "center_id = ?", [session["center_id"]]
+    else:  # patient
+        where, params = "patient_id = ?", [session["patient_id"]]
+
+    if request.method == "POST":
+        rids = request.form.getlist("rid")
+        cols = ["date",
+                "glucose_before_breakfast","glucose_after_breakfast",
+                "glucose_before_lunch","glucose_after_lunch",
+                "glucose_before_dinner","glucose_after_dinner",
+                "glucose_before_sleep","glucose_2_3_am",
+                "insulin_before_breakfast","insulin_before_lunch",
+                "insulin_before_dinner","insulin_before_sleep","insulin_2_3_am"]
+        for i, rid in enumerate(rids):
+            values = [request.form.getlist(c)[i].strip() for c in cols]
+            # re-check scope so nobody can edit a row outside their allowance
+            sets = ", ".join(f"{c} = ?" for c in cols)
+            conn.execute(
+                f"UPDATE readings SET {sets} WHERE rowid = ? AND {where}",
+                values + [rid] + params
+            )
+        conn.commit()
+        conn.close()
+        flash("Changes saved.")
+        return redirect("/records/edit")
+
+    rows = conn.execute(
+        f"SELECT rowid AS rid, * FROM readings WHERE {where} ORDER BY patient_id, date",
+        params).fetchall()
+    conn.close()
+    return render_template("records_edit.html", rows=rows, role=role)
+
+@app.route("/nurse/entry/<int:pid>")
+def nurse_entry(pid):
+    if session.get("role") != "nurse":
+        return redirect("/login")
+    conn = db()
+    patient = conn.execute("SELECT * FROM patients WHERE patient_id=? AND center_id=?",
+                           (pid, session["center_id"])).fetchone()
+    conn.close()
+    if not patient:
+        return redirect("/nurse")
+    return render_template("entry_choice.html", patient=patient)
+
+@app.route("/patient/new", methods=["GET", "POST"])
+def patient_new():
+    if session.get("role") != "patient":
+        return redirect("/login")
+    if request.method == "POST":
+        file = request.files.get("photo")
+        if not file:
+            return redirect("/patient/new")
+        os.makedirs("static", exist_ok=True)
+        file.save("static/current.png")
+
+        from RecognitionOfData import check_image_quality
+        problem = check_image_quality("static/current.png")
+        if problem:
+            flash(problem)
+            return redirect("/patient/new")
+
+        icols = request.form.get("insulin_cols", "5")
+        return redirect(f"/patient/corners?icols={icols}")
+    return render_template("patient_new.html")
+
+@app.route("/patient/corners")
+def patient_corners():
+    if session.get("role") != "patient":
+        return redirect("/login")
+    icols = request.args.get("icols", "5")
+    return render_template("patient_corners.html", icols=icols)
+
+@app.route("/patient/process", methods=["POST"])
+def patient_process():
+    if session.get("role") != "patient":
+        return redirect("/login")
+    corners = json.loads(request.form["corners"])
+    icols = int(request.form.get("icols", 5))
+    record = extract_from_corners("static/current.png", corners, insulin_cols=icols)
+    for row in record:
+        row[0] = parse_date(row[0])
+    return render_template("patient_review.html", record=record)
+
+@app.route("/patient/save", methods=["POST"])
+def patient_save():
+    if session.get("role") != "patient":
+        return redirect("/login")
+    pid = session["patient_id"]
+
+    record = []
+    for r in range(16):
+        row = [request.form.get(f"cell_{r}_{c}", "").strip() for c in range(14)]
+        record.append(row)
+
+    def has_data(row):
+        return any(cell not in ("", "?") for cell in row)
+    filled = [row for row in record if has_data(row)]
+
+    for row in filled:
+        if row[0] in ("", "?"):
+            flash("Every row with data needs a valid date.")
+            return render_template("patient_review.html", record=record)
+
+    conn = db()
+    prow = conn.execute("SELECT center_id FROM patients WHERE patient_id=?", (pid,)).fetchone()
+    center_id = prow["center_id"] if prow else None
+    for row in filled:
+        conn.execute("""
+            INSERT INTO readings (
+                patient_id, center_id, entered_by, date,
+                glucose_before_breakfast, glucose_after_breakfast,
+                glucose_before_lunch, glucose_after_lunch,
+                glucose_before_dinner, glucose_after_dinner,
+                glucose_before_sleep, glucose_2_3_am,
+                insulin_before_breakfast, insulin_before_lunch,
+                insulin_before_dinner, insulin_before_sleep,
+                insulin_2_3_am
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [pid, center_id, None] + row)
+    conn.commit()
+    conn.close()
+    flash(f"Saved {len(filled)} rows.")
+    return redirect("/patient")
+
+def password_ok(pw):
+    return pw is not None and len(pw) >= 6
+
+@app.route("/admin/toggle_nurse/<int:uid>")
+def toggle_nurse(uid):
+    if session.get("role") != "admin":
+        return redirect("/login")
+    conn = db()
+    conn.execute("UPDATE users SET active = 1 - active WHERE id=? AND role='nurse'", (uid,))
+    conn.commit()
+    conn.close()
+    return redirect("/admin/data")
+
+@app.route("/admin/toggle_patient/<int:pid>")
+def toggle_patient(pid):
+    if session.get("role") != "admin":
+        return redirect("/login")
+    conn = db()
+    conn.execute("UPDATE patients SET active = 1 - active WHERE patient_id=?", (pid,))
+    conn.commit()
+    conn.close()
+    return redirect("/admin/data")
+
+@app.route("/records/delete", methods=["GET", "POST"])
+def records_delete():
+    role = session.get("role")
+    if role not in ("admin", "nurse"):
+        return redirect("/login")
+
+    conn = db()
+    # scope + patient list for the picker
+    if role == "nurse":
+        patients = conn.execute("SELECT * FROM patients WHERE center_id=?",
+                                (session["center_id"],)).fetchall()
+        scope_sql, scope_params = "center_id = ?", [session["center_id"]]
+    else:
+        patients = conn.execute("SELECT * FROM patients").fetchall()
+        scope_sql, scope_params = "1=1", []
+
+    # STEP 2: actually delete the ticked rows
+    if request.method == "POST" and request.form.get("confirm") == "1":
+        rids = request.form.getlist("rid")
+        for rid in rids:
+            conn.execute(f"DELETE FROM readings WHERE rowid=? AND {scope_sql}",
+                         [rid] + scope_params)
+        conn.commit()
+        conn.close()
+        flash(f"Deleted {len(rids)} records.")
+        return redirect("/records/delete")
+
+    # STEP 1b: show matching rows to confirm
+    rows = None
+    patient = start = end = None
+    if request.method == "POST":
+        patient = request.form.get("patient")
+        start = request.form.get("start")
+        end = request.form.get("end")
+        q = f"SELECT rowid AS rid, * FROM readings WHERE {scope_sql} AND patient_id = ?"
+        params = scope_params + [patient]
+        if start and end:
+            q += " AND date BETWEEN ? AND ?"; params += [start, end]
+        q += " ORDER BY date"
+        rows = conn.execute(q, params).fetchall()
+
+    conn.close()
+    return render_template("records_delete.html", role=role, patients=patients,
+                           rows=rows, patient=patient, start=start, end=end)
+
+@app.route("/password", methods=["GET", "POST"])
+def change_password():
+    if session.get("role") not in ("admin", "nurse"):
+        return redirect("/login")
+
+    if request.method == "POST":
+        current = request.form["current"]
+        new = request.form["new"]
+        confirm = request.form["confirm"]
+
+        conn = db()
+        user = conn.execute("SELECT * FROM users WHERE id=?", (session["user_id"],)).fetchone()
+
+        if not check_password_hash(user["password_hash"], current):
+            conn.close()
+            flash("Current password is wrong.")
+            return redirect("/password")
+        if not password_ok(new):
+            conn.close()
+            flash("New password must be at least 6 characters.")
+            return redirect("/password")
+        if new != confirm:
+            conn.close()
+            flash("New passwords don't match.")
+            return redirect("/password")
+
+        conn.execute("UPDATE users SET password_hash=? WHERE id=?",
+                     (generate_password_hash(new), session["user_id"]))
+        conn.commit()
+        conn.close()
+        flash("Password changed.")
+        return redirect("/")
+    return render_template("password.html")
 
 if __name__ == "__main__":
     app.run(debug=True)

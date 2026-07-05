@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head><title>Delete records</title>
+<style>
+  body { font-family: sans-serif; max-width: 1200px; margin: 2rem auto; padding-bottom: 90px; }
+  table { border-collapse: collapse; font-size: 12px; margin-top: 1rem; }
+  th, td { border: 1px solid #ccc; padding: 3px 5px; }
+  th { background: #f0f0f0; }
+  .scroll { max-height: 60vh; overflow-y: auto; border: 1px solid #ddd; margin-top: 1rem; }
+  .bar { position: fixed; bottom: 0; right: 0; left: 0; background: #fff;
+         border-top: 1px solid #ccc; padding: 12px 20px; text-align: right; }
+  .bar button, .bar a { margin-left: 10px; padding: 8px 18px; font-size: 14px; }
+  .del { background: #c0392b; color: #fff; border: none; cursor: pointer; }
+</style>
+</head>
+<body>
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:green">{{ m }}</p>{% endfor %}
+  {% endwith %}
+  <p><a href="/{{ role }}">← back</a></p>
+  <h1>Delete records</h1>
+
+  <!-- STEP 1: pick patient + optional dates -->
+  <form method="POST" action="/records/delete">
+    <select name="patient" required>
+      <option value="">— pick a patient —</option>
+      {% for p in patients %}
+        <option value="{{ p['patient_id'] }}" {% if patient == p['patient_id']|string %}selected{% endif %}>{{ p['patient_id'] }} — {{ p['name'] }}</option>
+      {% endfor %}
+    </select>
+    From <input type="date" name="start" value="{{ start or '' }}">
+    To <input type="date" name="end" value="{{ end or '' }}">
+    <span style="color:#777">(dates optional)</span>
+    <button type="submit">Find records</button>
+  </form>
+
+  <!-- STEP 2: show matches with checkboxes + fixed confirm bar -->
+  {% if rows is not none %}
+    {% if rows %}
+    <form method="POST" action="/records/delete">
+      <input type="hidden" name="confirm" value="1">
+      <input type="hidden" name="patient" value="{{ patient }}">
+      <p>{{ rows|length }} records found. Untick any you want to keep.</p>
+      <div class="scroll">
+        <table>
+          <tr>
+            <th>Delete?</th><th>Date</th>
+            <th>G-BB</th><th>G-AB</th><th>G-BL</th><th>G-AL</th>
+            <th>G-BD</th><th>G-AD</th><th>G-BS</th><th>G-2/3</th>
+            <th>I-BB</th><th>I-BL</th><th>I-BD</th><th>I-BS</th><th>I-2/3</th>
+          </tr>
+          {% for r in rows %}
+          <tr>
+            <td style="text-align:center"><input type="checkbox" name="rid" value="{{ r['rid'] }}" checked></td>
+            <td>{{ r['date'] }}</td>
+            <td>{{ r['glucose_before_breakfast'] }}</td><td>{{ r['glucose_after_breakfast'] }}</td>
+            <td>{{ r['glucose_before_lunch'] }}</td><td>{{ r['glucose_after_lunch'] }}</td>
+            <td>{{ r['glucose_before_dinner'] }}</td><td>{{ r['glucose_after_dinner'] }}</td>
+            <td>{{ r['glucose_before_sleep'] }}</td><td>{{ r['glucose_2_3_am'] }}</td>
+            <td>{{ r['insulin_before_breakfast'] }}</td><td>{{ r['insulin_before_lunch'] }}</td>
+            <td>{{ r['insulin_before_dinner'] }}</td><td>{{ r['insulin_before_sleep'] }}</td>
+            <td>{{ r['insulin_2_3_am'] }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+
+      <div class="bar">
+        <a href="/records/delete">Cancel</a>
+        <button type="submit" class="del"
+                onclick="return confirm('Delete the ticked records? This cannot be undone.')">Yes, delete</button>
+      </div>
+    </form>
+    {% else %}
+      <p>No records found for that patient / date range.</p>
+    {% endif %}
+  {% endif %}
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head><title>Edit records</title>
+<style>
+  body { font-family: sans-serif; max-width: 1200px; margin: 2rem auto; }
+  table { border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #ccc; padding: 2px; }
+  th { background: #f0f0f0; }
+  input { width: 56px; border: none; padding: 4px; font-size: 12px; text-align: center; }
+  input[type=date] { width: 120px; }
+  input:focus { outline: 1px solid #2E75B6; }
+</style>
+</head>
+<body>
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:green">{{ m }}</p>{% endfor %}
+  {% endwith %}
+  <p><a href="/{{ role }}">← back</a></p>
+  <h1>Edit records</h1>
+  <p>Change any value, then Save.</p>
+
+  <form method="POST" action="/records/edit">
+    <table>
+      <tr>
+        <th>Patient</th><th>Date</th>
+        <th>G-BB</th><th>G-AB</th><th>G-BL</th><th>G-AL</th>
+        <th>G-BD</th><th>G-AD</th><th>G-BS</th><th>G-2/3</th>
+        <th>I-BB</th><th>I-BL</th><th>I-BD</th><th>I-BS</th><th>I-2/3</th>
+      </tr>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r['patient_id'] }}<input type="hidden" name="rid" value="{{ r['rid'] }}"></td>
+        <td><input type="date" name="date" value="{{ r['date'] if r['date'] != '?' else '' }}"></td>
+        <td><input name="glucose_before_breakfast" value="{{ r['glucose_before_breakfast'] }}"></td>
+        <td><input name="glucose_after_breakfast" value="{{ r['glucose_after_breakfast'] }}"></td>
+        <td><input name="glucose_before_lunch" value="{{ r['glucose_before_lunch'] }}"></td>
+        <td><input name="glucose_after_lunch" value="{{ r['glucose_after_lunch'] }}"></td>
+        <td><input name="glucose_before_dinner" value="{{ r['glucose_before_dinner'] }}"></td>
+        <td><input name="glucose_after_dinner" value="{{ r['glucose_after_dinner'] }}"></td>
+        <td><input name="glucose_before_sleep" value="{{ r['glucose_before_sleep'] }}"></td>
+        <td><input name="glucose_2_3_am" value="{{ r['glucose_2_3_am'] }}"></td>
+        <td><input name="insulin_before_breakfast" value="{{ r['insulin_before_breakfast'] }}"></td>
+        <td><input name="insulin_before_lunch" value="{{ r['insulin_before_lunch'] }}"></td>
+        <td><input name="insulin_before_dinner" value="{{ r['insulin_before_dinner'] }}"></td>
+        <td><input name="insulin_before_sleep" value="{{ r['insulin_before_sleep'] }}"></td>
+        <td><input name="insulin_2_3_am" value="{{ r['insulin_2_3_am'] }}"></td>
+      </tr>
+      {% endfor %}
+    </table>
+    <br>
+    <button type="submit">Save changes</button>
+  </form>
+</body>
+</html>

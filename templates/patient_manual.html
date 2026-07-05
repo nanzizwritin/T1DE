@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head><title>Add my readings</title>
+<style>
+  body { font-family: sans-serif; max-width: 1100px; margin: 2rem auto; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 2px; }
+  th { font-size: 11px; background: #f0f0f0; }
+  input { width: 58px; border: none; padding: 4px; font-size: 13px; text-align: center; }
+  input[type=date] { width: 130px; }
+  input[type=number] { width: 60px; }
+  .controls { margin-top: 10px; }
+  .controls button { margin-right: 6px; }
+</style>
+</head>
+<body>
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
+  {% endwith %}
+  <p><a href="/patient">← back</a></p>
+  <h1>Add my readings</h1>
+
+  <form method="POST" action="/patient/manual/save">
+    <table id="grid">
+      <tr>
+        <th>Date</th>
+        <th>G-BB</th><th>G-AB</th><th>G-BL</th><th>G-AL</th>
+        <th>G-BD</th><th>G-AD</th><th>G-BS</th><th>G-2/3</th>
+        <th>I-BB</th><th>I-BL</th><th>I-BD</th><th>I-BS</th><th>I-2/3</th>
+      </tr>
+      <tr>
+        <td><input type="date" name="date" value="{{ today }}"></td>
+        {% for c in range(13) %}<td><input name="col{{ c }}"></td>{% endfor %}
+      </tr>
+    </table>
+
+    <div class="controls">
+      Rows: <input type="number" id="rowcount" value="1" min="1">
+      <button type="button" onclick="setRows()">Set</button>
+      <button type="button" onclick="addRow()">+ Add row</button>
+      <button type="button" onclick="fillDates()">Fill dates</button>
+      <button type="submit">Save</button>
+    </div>
+  </form>
+
+<script>
+  const table = document.getElementById('grid');
+  const template = table.rows[1];
+
+  function blankRow() {
+    const row = template.cloneNode(true);
+    row.querySelectorAll('input').forEach(inp => { if (inp.type !== 'date') inp.value = ''; });
+    return row;
+  }
+
+  function addRow() {
+    table.appendChild(blankRow());
+  }
+
+  function setRows() {
+    const n = parseInt(document.getElementById('rowcount').value) || 1;
+    while (table.rows.length > 1) table.deleteRow(1);
+    for (let i = 0; i < n; i++) table.appendChild(blankRow());
+  }
+  function fillDates() {
+    const dates = Array.from(table.querySelectorAll('input[type=date]'));
+    // find the first row that has a date typed in
+    let anchor = -1;
+    for (let i = 0; i < dates.length; i++) {
+      if (dates[i].value) { anchor = i; break; }
+    }
+    if (anchor === -1) return;   // nothing typed, nothing to fill from
+
+    const base = new Date(dates[anchor].value);
+    dates.forEach((input, i) => {
+      if (!input.value) {
+        const d = new Date(base);
+        d.setDate(d.getDate() + (i - anchor));   // rows below +1/day, above -1/day
+        input.value = d.toISOString().slice(0, 10);
+      }
+    });
+  }
+</script>
+</body>
+</html>

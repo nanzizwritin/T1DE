@@ -11,6 +11,27 @@
   .datecol input { width: 100px; background: #fff7e6; }
 </style>
 </head>
+<script>
+  function fillDates() {
+    // date cells are the first column of each row: name="cell_<row>_0"
+    const dateInputs = Array.from(document.querySelectorAll('input[name$="_0"]'));
+    let anchor = -1;
+    for (let i = 0; i < dateInputs.length; i++) {
+      const v = dateInputs[i].value;
+      if (v && v !== '?' && !isNaN(new Date(v))) { anchor = i; break; }
+    }
+    if (anchor === -1) return;
+
+    const base = new Date(dateInputs[anchor].value);
+    dateInputs.forEach((input, i) => {
+      if (!input.value || input.value === '?') {
+        const d = new Date(base);
+        d.setDate(d.getDate() + (i - anchor));
+        input.value = d.toISOString().slice(0, 10);
+      }
+    });
+  }
+</script>
 <body>
   {% with messages = get_flashed_messages() %}
     {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
@@ -42,6 +63,7 @@
       {% endfor %}
     </table>
     <br>
+    <button type="button" onclick="fillDates()">Fill dates</button>
     <button type="submit">Save</button>
   </form>
 </body>

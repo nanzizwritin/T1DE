@@ -13,6 +13,10 @@
 </head>
 <body>
   <h1>My records</h1>
+  <p><a href="/patient/manual">+ Add my readings</a></p>
+  <p><a href="/patient/new">+ Add from photo</a></p>
+  <li><a href="/records/edit">Edit records</a></li>
+  
   <p>Logged in as {{ session['username'] }} — <a href="/logout">log out</a></p>
 
   <p>{{ readings|length }} rows</p>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Add record</title></head>
+<body style="font-family: sans-serif; max-width: 700px; margin: 2rem auto;">
+  <p><a href="/nurse/patient/{{ patient['patient_id'] }}">← back</a></p>
+  <h1>Add a record — {{ patient['name'] }}</h1>
+  <p>How do you want to add readings?</p>
+  <ul>
+    <li><a href="/nurse/manual/{{ patient['patient_id'] }}">Type manually</a> — enter rows yourself</li>
+    <li><a href="/nurse/new/{{ patient['patient_id'] }}">From photo</a> — upload a photo of the record sheet</li>
+  </ul>
+</body>
+</html>
