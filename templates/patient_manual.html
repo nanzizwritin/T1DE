@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<head><title>Add my readings</title>
+<head><link rel="stylesheet" href="/static/style.css"><title>Add my readings</title>
 <style>
   body { font-family: sans-serif; max-width: 1100px; margin: 2rem auto; }
   table { border-collapse: collapse; }
@@ -13,7 +13,7 @@
   .controls button { margin-right: 6px; }
 </style>
 </head>
-<body>
+<body class="patient">
   {% with messages = get_flashed_messages() %}
     {% for m in messages %}<p style="color:red">{{ m }}</p>{% endfor %}
   {% endwith %}

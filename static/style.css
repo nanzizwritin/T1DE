@@ -1,0 +1,246 @@
+/* ============================================================
+   Diabetes Record System — shared stylesheet
+   Link this once in every page:
+     <link rel="stylesheet" href="/static/style.css">
+   Put it at the TOP of <head> so pages with their own table
+   styles can still override where needed.
+   Add class="patient" to <body> on patient-facing pages for
+   the warmer accent.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --ink:        #17323A;
+  --muted:      #5C767B;
+  --teal:       #2B8079;
+  --teal-dark:  #1E625C;
+  --teal-soft:  #E4F0EE;
+  --accent:     var(--teal);
+  --accent-dark:var(--teal-dark);
+  --accent-soft:var(--teal-soft);
+  --bg:         #EDF3F1;
+  --card:       #FFFFFF;
+  --border:     #D6E2DF;
+  --danger:     #BB5340;
+  --danger-soft:#F7E6E1;
+  --ok:         #2C8A6B;
+  --r:   16px;
+  --r-sm: 10px;
+  --shadow: 0 8px 30px rgba(18,52,56,.09);
+}
+
+/* patient side: warmer accent */
+body.patient {
+  --accent:      #DB8848;
+  --accent-dark: #B96C31;
+  --accent-soft: #FaEEE1;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background:
+    radial-gradient(1200px 600px at 50% -200px, #F6FAF9, transparent),
+    var(--bg);
+  min-height: 100%;
+}
+
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: var(--ink);
+  line-height: 1.55;
+  max-width: 860px;
+  margin: 2.6rem auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 2.6rem 2.8rem 3rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* signature: glucose-range gradient strip on the card top */
+body::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  background: linear-gradient(90deg,
+    #E8975A 0%, var(--accent) 32%, var(--accent) 68%, #E8975A 100%);
+}
+
+/* ---------- typography ---------- */
+h1, h2, h3 {
+  font-family: 'Bricolage Grotesque', 'IBM Plex Sans', sans-serif;
+  color: var(--ink);
+  line-height: 1.15;
+  margin: 0 0 .5rem;
+}
+h1 { font-size: 1.85rem; font-weight: 700; letter-spacing: -.01em; }
+h2 {
+  font-size: 1.15rem; font-weight: 600; margin-top: 1.8rem;
+  padding-bottom: .35rem;
+}
+h3 { font-size: 1rem; font-weight: 600; margin-top: 1.1rem; color: var(--teal-dark); }
+
+p  { margin: .5rem 0; }
+
+/* ---------- links ---------- */
+a {
+  color: var(--accent-dark);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+  transition: border-color .15s, color .15s;
+}
+a:hover { border-bottom-color: currentColor; }
+
+/* back links & log out — quieter */
+a[href$="logout"] { color: var(--muted); }
+
+/* ---------- home / menu lists become tappable rows ---------- */
+h2 + ul, ul { list-style: none; padding: 0; margin: .6rem 0; }
+li {
+  padding: .85rem 1.05rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  margin-bottom: .55rem;
+  background: #FCFEFE;
+  transition: border-color .15s, background .15s, transform .05s;
+}
+li:hover { border-color: var(--accent); background: var(--accent-soft); }
+li a { font-weight: 600; color: var(--ink); border-bottom: none; }
+li a:hover { color: var(--accent-dark); }
+
+/* ---------- forms ---------- */
+input, select {
+  font: inherit;
+  color: var(--ink);
+  padding: .6rem .7rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: #FCFEFE;
+  margin: .25rem .4rem .25rem 0;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+input::placeholder { color: #9BB0B2; }
+
+label { color: var(--muted); font-size: .95rem; }
+
+/* ---------- buttons ---------- */
+button, input[type="submit"] {
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+  padding: .62rem 1.35rem;
+  cursor: pointer;
+  transition: background .15s, transform .05s;
+}
+button:hover, input[type="submit"]:hover { background: var(--accent-dark); }
+button:active { transform: translateY(1px); }
+
+/* secondary / plain buttons (type=button used for add-row etc.) */
+button[type="button"] {
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+}
+button[type="button"]:hover { background: #d8ebe8; }
+
+/* danger button (delete) — targets your .del class */
+.del, button.del {
+  background: var(--danger) !important;
+  color: #fff !important;
+}
+.del:hover { background: #a3452f !important; }
+
+/* ---------- tables (records / analysis / review) ---------- */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: .9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+th, td {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: .5rem .6rem;
+  text-align: left;
+}
+th {
+  background: var(--accent-soft);
+  color: var(--teal-dark);
+  font-weight: 600;
+  font-size: .8rem;
+}
+tr:last-child td { border-bottom: none; }
+tbody tr:nth-child(even) td, tr:nth-child(even) td { background: #F7FBFA; }
+
+/* numeric cells & inputs in data grids read as data */
+td input, table input {
+  font-family: 'IBM Plex Mono', monospace;
+  text-align: center;
+  margin: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 6px;
+}
+td input:focus { border-color: var(--accent); background:#fff; }
+
+/* ---------- flash messages ---------- */
+/* (your inline color styles still work; this adds a soft pill) */
+p[style*="color:green"], p[style*="color: green"] {
+  background: #E6F4EE; color: var(--ok) !important;
+  padding: .7rem 1rem; border-radius: var(--r-sm);
+  border: 1px solid #BfE3D3;
+}
+p[style*="color:red"], p[style*="color: red"] {
+  background: var(--danger-soft); color: var(--danger) !important;
+  padding: .7rem 1rem; border-radius: var(--r-sm);
+  border: 1px solid #E8C9C0;
+}
+
+/* ---------- fixed confirm bar (delete page) ---------- */
+.bar {
+  background: rgba(255,255,255,.96) !important;
+  backdrop-filter: blur(6px);
+  border-top: 1px solid var(--border) !important;
+  box-shadow: 0 -6px 20px rgba(18,52,56,.06);
+}
+
+/* ---------- patient education panel ---------- */
+.info {
+  background: var(--accent-soft) !important;
+  border: 1px solid #E9D8C4 !important;
+  border-radius: var(--r) !important;
+  padding: 1.4rem 1.6rem !important;
+  margin-top: 1.8rem;
+}
+.info h2 { margin-top: 0; }
+.disclaimer { color: var(--muted); }
+
+/* scroll area on delete page */
+.scroll { border-radius: var(--r-sm); border: 1px solid var(--border); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 640px) {
+  body { margin: 0; border-radius: 0; padding: 1.4rem 1.2rem 2rem; border: none; min-height: 100vh; }
+  table { font-size: .8rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
