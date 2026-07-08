@@ -22,6 +22,20 @@
 
   <!-- STEP 1: pick patient + optional dates -->
   <form method="POST" action="/records/delete">
+    {% if role == 'admin' %}
+    <select name="center">
+      <option value="">All centers</option>
+      {% for c in centers %}
+        <option value="{{ c['id'] }}" {% if center == c['id']|string %}selected{% endif %}>{{ c['name'] }}</option>
+      {% endfor %}
+    </select>
+    {% elif role == 'nurse' %}
+    <select disabled>
+      {% for c in centers %}
+        {% if c['id'] == my_center %}<option>{{ c['name'] }}</option>{% endif %}
+      {% endfor %}
+    </select>
+    {% endif %}
     <select name="patient" required>
       <option value="">— pick a patient —</option>
       {% for p in patients %}

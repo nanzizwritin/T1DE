@@ -50,7 +50,7 @@ body {
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
   color: var(--ink);
   line-height: 1.55;
-  max-width: 860px;
+  max-width: 940px;
   margin: 2.6rem auto;
   background: var(--card);
   border: 1px solid var(--border);
@@ -58,7 +58,7 @@ body {
   box-shadow: var(--shadow);
   padding: 2.6rem 2.8rem 3rem;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* signature: glucose-range gradient strip on the card top */
@@ -103,6 +103,7 @@ a[href$="logout"] { color: var(--muted); }
 /* ---------- home / menu lists become tappable rows ---------- */
 h2 + ul, ul { list-style: none; padding: 0; margin: .6rem 0; }
 li {
+  list-style: none;
   padding: .85rem 1.05rem;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
@@ -163,22 +164,29 @@ button[type="button"]:hover { background: #d8ebe8; }
 }
 .del:hover { background: #a3452f !important; }
 
-/* ---------- tables (records / analysis / review) ---------- */
+/* ---------- tables (records / analysis / review) ----------
+   display:block + width:max-content + max-width:100% + overflow-x
+   lets any wide table scroll sideways *inside* the card, with no
+   wrapper div needed. This is what stops the 16-column tables from
+   being clipped off-screen. */
 table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
   border-collapse: separate;
   border-spacing: 0;
-  width: 100%;
   margin: 1rem 0;
   font-size: .9rem;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  overflow: hidden;
 }
 th, td {
   border: none;
   border-bottom: 1px solid var(--border);
-  padding: .5rem .6rem;
+  padding: .5rem .7rem;
   text-align: left;
+  white-space: nowrap;
 }
 th {
   background: var(--accent-soft);

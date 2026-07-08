@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="/static/style.css">
+<title>My records</title>
+</head>
+<body class="patient">
+  <p><a href="/patient">← back</a></p>
+  <h1>My records</h1>
+  <form method="GET" action="/patient/records" style="margin-bottom:1rem;">
+    From <input type="date" name="start" value="{{ start }}">
+    To <input type="date" name="end" value="{{ end }}">
+    <button type="submit">Filter</button>
+    <a href="/patient/records">clear</a>
+  </form>
+  {% if readings %}
+  <p>{{ readings|length }} entries</p>
+  <table>
+    <tr>
+      <th>Date</th>
+      <th title="glucose before breakfast">G-BB</th><th title="glucose after breakfast">G-AB</th>
+      <th title="glucose before lunch">G-BL</th><th title="glucose after lunch">G-AL</th>
+      <th title="glucose before dinner">G-BD</th><th title="glucose after dinner">G-AD</th>
+      <th title="glucose before sleep">G-BS</th><th title="glucose 2–3 am">G-2/3</th>
+      <th title="insulin before breakfast">I-BB</th><th title="insulin before lunch">I-BL</th>
+      <th title="insulin before dinner">I-BD</th><th title="insulin before sleep">I-BS</th>
+      <th title="insulin 2–3 am">I-2/3</th>
+    </tr>
+    {% for r in readings %}
+    <tr>
+      <td>{{ r['date'] }}</td>
+      <td>{{ r['glucose_before_breakfast'] }}</td><td>{{ r['glucose_after_breakfast'] }}</td>
+      <td>{{ r['glucose_before_lunch'] }}</td><td>{{ r['glucose_after_lunch'] }}</td>
+      <td>{{ r['glucose_before_dinner'] }}</td><td>{{ r['glucose_after_dinner'] }}</td>
+      <td>{{ r['glucose_before_sleep'] }}</td><td>{{ r['glucose_2_3_am'] }}</td>
+      <td>{{ r['insulin_before_breakfast'] }}</td><td>{{ r['insulin_before_lunch'] }}</td>
+      <td>{{ r['insulin_before_dinner'] }}</td><td>{{ r['insulin_before_sleep'] }}</td>
+      <td>{{ r['insulin_2_3_am'] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>No records yet. Add some with "Add my readings" or "Add from photo".</p>
+  {% endif %}
+</body>
+</html>

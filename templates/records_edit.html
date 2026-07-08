@@ -18,8 +18,41 @@
   <p><a href="/{{ role }}">← back</a></p>
   <h1>Edit records</h1>
   <p>Change any value, then Save.</p>
+  <form method="GET" action="/records/edit" style="margin-bottom:1rem;">
+    {% if role == 'admin' %}
+      <select name="center">
+        <option value="">All centers</option>
+        {% for c in centers %}
+          <option value="{{ c['id'] }}" {% if center == c['id']|string %}selected{% endif %}>{{ c['name'] }}</option>
+        {% endfor %}
+      </select>
+    {% elif role == 'nurse' %}
+      <select disabled>
+        {% for c in centers %}
+          {% if c['id'] == my_center %}<option>{{ c['name'] }}</option>{% endif %}
+        {% endfor %}
+      </select>
+    {% endif %}
 
+    {% if role in ['admin', 'nurse'] %}
+      <select name="patient">
+        <option value="">All patients</option>
+        {% for p in patients %}
+          <option value="{{ p['patient_id'] }}" {% if patient == p['patient_id']|string %}selected{% endif %}>{{ p['patient_id'] }} — {{ p['name'] }}</option>
+        {% endfor %}
+      </select>
+    {% endif %}
+
+    From <input type="date" name="start" value="{{ start }}">
+    To <input type="date" name="end" value="{{ end }}">
+    <button type="submit">Filter</button>
+    <a href="/records/edit">clear</a>
+  </form>
   <form method="POST" action="/records/edit">
+    <input type="hidden" name="center" value="{{ center }}">
+    <input type="hidden" name="patient" value="{{ patient }}">
+    <input type="hidden" name="start" value="{{ start }}">
+    <input type="hidden" name="end" value="{{ end }}">
     <table>
       <tr>
         <th>Patient</th><th>Date</th>

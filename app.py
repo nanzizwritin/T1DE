@@ -333,22 +333,24 @@ def admin_records():
     center  = request.args.get("center")
     nurse   = request.args.get("nurse")
     patient = request.args.get("patient")
+    start   = request.args.get("start")
+    end     = request.args.get("end")
 
     query = "SELECT * FROM readings WHERE 1=1"
     params = []
-    if center:
-        query += " AND center_id = ?";  params.append(center)
-    if nurse:
-        query += " AND entered_by = ?";  params.append(nurse)
-    if patient:
-        query += " AND patient_id = ?";  params.append(patient)
+    if center:  query += " AND center_id = ?";  params.append(center)
+    if nurse:   query += " AND entered_by = ?";  params.append(nurse)
+    if patient: query += " AND patient_id = ?";  params.append(patient)
+    if start and end: query += " AND date BETWEEN ? AND ?"; params += [start, end]
     query += " ORDER BY date"
 
     readings = conn.execute(query, params).fetchall()
     conn.close()
     return render_template("records.html",
         centers=centers, nurses=nurses, patients=patients,
-        readings=readings, center=center, nurse=nurse, patient=patient)
+        readings=readings, center=center, nurse=nurse, patient=patient,
+        start=start or "", end=end or "")
+
 
 @app.route("/analysis")
 def analysis():
@@ -395,7 +397,8 @@ def analysis():
     conn.close()
     return render_template("analysis.html", role=role, centers=centers, patients=patients,
                            start=start, end=end, patient=patient, center=center,
-                           per_patient=per_patient, error=error)
+                           per_patient=per_patient, error=error,
+                           my_center=session.get("center_id"))
 
 @app.route("/nurse/records")
 def nurse_records():
@@ -405,17 +408,22 @@ def nurse_records():
     patients = conn.execute("SELECT * FROM patients WHERE center_id=?",
                             (session["center_id"],)).fetchall()
     patient = request.args.get("patient")
+    start = request.args.get("start")
+    end = request.args.get("end")
 
     query = "SELECT * FROM readings WHERE center_id = ?"
     params = [session["center_id"]]
     if patient:
         query += " AND patient_id = ?"; params.append(patient)
+    if start and end:
+        query += " AND date BETWEEN ? AND ?"; params += [start, end]
     query += " ORDER BY patient_id, date"
 
     readings = conn.execute(query, params).fetchall()
     conn.close()
-    return render_template("nurse_records.html",
-                           patients=patients, readings=readings, patient=patient)
+    return render_template("nurse_records.html", patients=patients,
+                           readings=readings, patient=patient,
+                           start=start or "", end=end or "")
 
 
 
@@ -458,16 +466,6 @@ def nurse_new(pid):
         return redirect(f"/nurse/corners/{pid}?icols={icols}")
     return render_template("new.html", pid=pid)
 
-@app.route("/patient")
-def patient_home():
-    if session.get("role") != "patient":
-        return redirect("/login")
-    conn = db()
-    readings = conn.execute(
-        "SELECT * FROM readings WHERE patient_id = ? ORDER BY date",
-        (session["patient_id"],)).fetchall()
-    conn.close()
-    return render_template("patient_portal.html", readings=readings)
 
 @app.route("/nurse/manual/<int:pid>")
 def nurse_manual(pid):
@@ -530,50 +528,6 @@ def patient_manual():
     today = datetime.now().strftime("%Y-%m-%d")
     return render_template("patient_manual.html", today=today)
 
-@app.route("/patient/manual/save", methods=["POST"])
-def patient_manual_save():
-    if session.get("role") != "patient":
-        return redirect("/login")
-    pid = session["patient_id"]
-
-    dates = request.form.getlist("date")
-    rows = []
-    for i in range(len(dates)):
-        row = [request.form.getlist(f"col{c}")[i] for c in range(13)]
-        full = [dates[i]] + row
-        rows.append([cell.strip() for cell in full])
-
-    def has_data(row):
-        return any(cell for cell in row[1:])
-    filled = [r for r in rows if has_data(r)]
-
-    for r in filled:
-        if not r[0]:
-            flash("Every row with data needs a date.")
-            return redirect("/patient/manual")
-
-    # patient's own center, so readings stay scoped correctly
-    conn = db()
-    prow = conn.execute("SELECT center_id FROM patients WHERE patient_id=?", (pid,)).fetchone()
-    center_id = prow["center_id"] if prow else None
-    for r in filled:
-        conn.execute("""
-            INSERT INTO readings (
-                patient_id, center_id, entered_by, date,
-                glucose_before_breakfast, glucose_after_breakfast,
-                glucose_before_lunch, glucose_after_lunch,
-                glucose_before_dinner, glucose_after_dinner,
-                glucose_before_sleep, glucose_2_3_am,
-                insulin_before_breakfast, insulin_before_lunch,
-                insulin_before_dinner, insulin_before_sleep,
-                insulin_2_3_am
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, [pid, center_id, None] + r)
-    conn.commit()
-    conn.close()
-    flash(f"Saved {len(filled)} rows.")
-    return redirect("/patient")
-
 @app.route("/records/edit", methods=["GET", "POST"])
 def records_edit():
     role = session.get("role")
@@ -582,13 +536,23 @@ def records_edit():
 
     conn = db()
 
-    # scope: what rows can this person touch?
+    # base scope by role
     if role == "admin":
-        where, params = "1=1", []
+        base_where, base_params = "1=1", []
     elif role == "nurse":
-        where, params = "center_id = ?", [session["center_id"]]
-    else:  # patient
-        where, params = "patient_id = ?", [session["patient_id"]]
+        base_where, base_params = "center_id = ?", [session["center_id"]]
+    else:
+        base_where, base_params = "patient_id = ?", [session["patient_id"]]
+
+    # dropdown data
+    centers = conn.execute("SELECT * FROM centers").fetchall()
+    if role == "admin":
+        patients = conn.execute("SELECT * FROM patients").fetchall()
+    elif role == "nurse":
+        patients = conn.execute("SELECT * FROM patients WHERE center_id=?",
+                                (session["center_id"],)).fetchall()
+    else:
+        patients = []
 
     if request.method == "POST":
         rids = request.form.getlist("rid")
@@ -601,22 +565,41 @@ def records_edit():
                 "insulin_before_dinner","insulin_before_sleep","insulin_2_3_am"]
         for i, rid in enumerate(rids):
             values = [request.form.getlist(c)[i].strip() for c in cols]
-            # re-check scope so nobody can edit a row outside their allowance
             sets = ", ".join(f"{c} = ?" for c in cols)
             conn.execute(
-                f"UPDATE readings SET {sets} WHERE rowid = ? AND {where}",
-                values + [rid] + params
-            )
+                f"UPDATE readings SET {sets} WHERE rowid = ? AND {base_where}",
+                values + [rid] + base_params)
         conn.commit()
         conn.close()
         flash("Changes saved.")
-        return redirect("/records/edit")
+        args = request.form
+        return redirect(f"/records/edit?center={args.get('center','')}"
+                        f"&patient={args.get('patient','')}"
+                        f"&start={args.get('start','')}&end={args.get('end','')}")
 
-    rows = conn.execute(
-        f"SELECT rowid AS rid, * FROM readings WHERE {where} ORDER BY patient_id, date",
-        params).fetchall()
+    # read filters
+    center  = request.args.get("center")
+    patient = request.args.get("patient")
+    start   = request.args.get("start")
+    end     = request.args.get("end")
+
+    q = f"SELECT rowid AS rid, * FROM readings WHERE {base_where}"
+    qp = list(base_params)
+    if role == "admin" and center:
+        q += " AND center_id = ?"; qp.append(center)
+    if patient:
+        q += " AND patient_id = ?"; qp.append(patient)
+    if start and end:
+        q += " AND date BETWEEN ? AND ?"; qp += [start, end]
+    q += " ORDER BY patient_id, date"
+
+    rows = conn.execute(q, qp).fetchall()
     conn.close()
-    return render_template("records_edit.html", rows=rows, role=role)
+    return render_template("records_edit.html", rows=rows, role=role,
+                           centers=centers, patients=patients,
+                           center=center or "", patient=patient or "",
+                           start=start or "", end=end or "",
+                           my_center=session.get("center_id"))
 
 @app.route("/nurse/entry/<int:pid>")
 def nurse_entry(pid):
@@ -740,7 +723,7 @@ def records_delete():
         return redirect("/login")
 
     conn = db()
-    # scope + patient list for the picker
+    centers = conn.execute("SELECT * FROM centers").fetchall()
     if role == "nurse":
         patients = conn.execute("SELECT * FROM patients WHERE center_id=?",
                                 (session["center_id"],)).fetchall()
@@ -748,6 +731,9 @@ def records_delete():
     else:
         patients = conn.execute("SELECT * FROM patients").fetchall()
         scope_sql, scope_params = "1=1", []
+        center = request.form.get("center") or request.args.get("center")
+        if center:
+            scope_sql += " AND center_id = ?"; scope_params.append(center)
 
     # STEP 2: actually delete the ticked rows
     if request.method == "POST" and request.form.get("confirm") == "1":
@@ -811,6 +797,31 @@ def change_password():
         flash("Password changed.")
         return redirect("/")
     return render_template("password.html")
+
+@app.route("/patient")
+def patient_home():
+    if session.get("role") != "patient":
+        return redirect("/login")
+    return render_template("patient_portal.html")
+
+@app.route("/patient/records")
+def patient_records():
+    if session.get("role") != "patient":
+        return redirect("/login")
+    conn = db()
+    start = request.args.get("start")
+    end = request.args.get("end")
+
+    query = "SELECT * FROM readings WHERE patient_id=?"
+    params = [session["patient_id"]]
+    if start and end:
+        query += " AND date BETWEEN ? AND ?"; params += [start, end]
+    query += " ORDER BY date"
+
+    readings = conn.execute(query, params).fetchall()
+    conn.close()
+    return render_template("patient_records.html", readings=readings,
+                           start=start or "", end=end or "")
 
 if __name__ == "__main__":
     app.run(debug=True)

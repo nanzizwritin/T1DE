@@ -1,35 +1,24 @@
 <!DOCTYPE html>
 <html>
-<head><link rel="stylesheet" href="/static/style.css"><title>My records</title>
-<style>
-  body { font-family: sans-serif; max-width: 1000px; margin: 2rem auto; }
-  table { border-collapse: collapse; font-size: 12px; margin-top: 1rem; }
-  th, td { border: 1px solid #ccc; padding: 3px 5px; }
-  th { background: #f0f0f0; }
-  .info { background: #f5f9ff; border: 1px solid #cfe0f5; padding: 1rem 1.25rem; margin-top: 1.5rem; border-radius: 6px; }
-  .info h2 { margin-top: 0; }
-  .disclaimer { color: #555; font-size: 13px; font-style: italic; }
-</style>
+<head>
+<link rel="stylesheet" href="/static/style.css">
+<title>My portal</title>
 </head>
 <body class="patient">
-  <h1>My records</h1>
-  <p><a href="/patient/manual">+ Add my readings</a></p>
-  <p><a href="/patient/new">+ Add from photo</a></p>
-  <li><a href="/records/edit">Edit records</a></li>
-  
-  <p>Logged in as {{ session['username'] }} — <a href="/logout">log out</a></p>
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<p style="color:green">{{ m }}</p>{% endfor %}
+  {% endwith %}
 
-  <p>{{ readings|length }} rows</p>
-  <table>
-    {% if readings %}
-      <tr>{% for col in readings[0].keys() %}<th>{{ col }}</th>{% endfor %}</tr>
-      {% for r in readings %}
-        <tr>{% for col in readings[0].keys() %}<td>{{ r[col] }}</td>{% endfor %}</tr>
-      {% endfor %}
-    {% else %}
-      <tr><td>No records yet.</td></tr>
-    {% endif %}
-  </table>
+  <h1>Welcome, {{ session['username'] }}</h1>
+  <p><a href="/logout">log out</a></p>
+
+  <h2>What do you want to do?</h2>
+  <ul>
+    <li><a href="/patient/records">My records</a> — see all your saved readings</li>
+    <li><a href="/patient/manual">Add my readings</a> — type in your values</li>
+    <li><a href="/patient/new">Add from photo</a> — upload a photo of your record sheet</li>
+    <li><a href="/records/edit">Edit records</a> — fix a saved value</li>
+  </ul>
 
   <div class="info">
     <h2>About Type 1 Diabetes</h2>
@@ -44,12 +33,12 @@
     </ul>
 
     <h3>Why monitoring matters</h3>
-    <p>Tracking glucose and insulin regularly helps you and your care team spot patterns — like times of day that tend to run high or low — and adjust care. Recording values consistently is one of the most useful things you can do between visits.</p>
+    <p>Tracking glucose and insulin regularly helps you and your care team spot patterns and adjust care. Recording values consistently is one of the most useful things you can do between visits.</p>
 
     <h3>Insulin basics</h3>
-    <p>Most people with T1D use two kinds of insulin: <strong>basal</strong> (long-acting, working quietly in the background) and <strong>bolus</strong> (taken around meals). Keeping doses and timing consistent helps keep glucose steadier.</p>
+    <p>Most people with T1D use two kinds of insulin: <strong>basal</strong> (long-acting, working in the background) and <strong>bolus</strong> (taken around meals). Keeping doses and timing consistent helps keep glucose steadier.</p>
 
-    <p class="disclaimer">This information is general education about Type 1 diabetes, not medical advice. Always follow the guidance of your own doctor or diabetes care team for decisions about your treatment.</p>
+    <p class="disclaimer">This information is general education about Type 1 diabetes, not medical advice. Always follow the guidance of your own doctor or diabetes care team.</p>
   </div>
 </body>
 </html>

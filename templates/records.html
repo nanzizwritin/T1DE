@@ -35,7 +35,8 @@
         <option value="{{ p['patient_id'] }}" {% if patient == p['patient_id']|string %}selected{% endif %}>{{ p['patient_id'] }} — {{ p['name'] }}</option>
       {% endfor %}
     </select>
-
+    From <input type="date" name="start" value="{{ start }}">
+    To <input type="date" name="end" value="{{ end }}">
     <button type="submit">Show</button>
   </form>
 

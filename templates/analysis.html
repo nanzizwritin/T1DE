@@ -17,6 +17,7 @@
   <form method="GET" action="/analysis">
     Start <input type="date" name="start" value="{{ start or '' }}" required>
     End <input type="date" name="end" value="{{ end or '' }}" required>
+
     {% if role == 'admin' %}
     <select name="center">
       <option value="">All centers</option>
@@ -24,7 +25,14 @@
         <option value="{{ c['id'] }}" {% if center == c['id']|string %}selected{% endif %}>{{ c['name'] }}</option>
       {% endfor %}
     </select>
+    {% elif role == 'nurse' %}
+    <select disabled>
+      {% for c in centers %}
+        {% if c['id'] == my_center %}<option>{{ c['name'] }}</option>{% endif %}
+      {% endfor %}
+    </select>
     {% endif %}
+
     <select name="patient">
       <option value="">All patients</option>
       {% for p in patients %}
